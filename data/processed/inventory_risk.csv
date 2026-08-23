@@ -1,0 +1,4 @@
+sku_id,product_name,category,current_stock,avg_daily_demand,forecast_avg_daily_demand,forecast_3_day_demand,lead_time_days,lead_time_demand,days_of_stock,stock_surplus_vs_lead_time,projected_stock_after_3_days,risk_level
+SKU002,Table Lamp,Lighting,5,3.5714285714285716,3.783333333333333,11.35,5,17.857142857142858,1.4,-12.857142857142858,-6.35,High
+SKU003,Cushion Set,Home Decor,6,4.214285714285714,4.24,12.72,3,12.642857142857142,1.423728813559322,-6.642857142857142,-6.720000000000001,High
+SKU001,Wooden Chair,Furniture,11,2.0714285714285716,2.1166666666666667,6.35,7,14.500000000000002,5.310344827586206,-3.5000000000000018,4.65,High

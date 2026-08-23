@@ -1,0 +1,4 @@
+sku_id,product_name,category,unit_price,lead_time_days
+SKU001,Wooden Chair,Furniture,2500,7
+SKU002,Table Lamp,Lighting,1200,5
+SKU003,Cushion Set,Home Decor,800,3

@@ -1,0 +1,19 @@
+# Mini-FORESIGHT - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Data manipulation
+pandas==2.2.3
+numpy==1.26.4
+
+# Data visualization (for EDA)
+matplotlib==3.9.2
+seaborn==0.13.2
+
+# Machine learning / forecasting
+scikit-learn==1.5.2
+
+# Interactive dashboard (used later in app/)
+streamlit==1.40.2
+
+# Jupyter notebooks
+jupyter==1.0.0

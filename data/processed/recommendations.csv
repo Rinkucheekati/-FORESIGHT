@@ -1,0 +1,4 @@
+sku_id,product_name,category,current_stock,forecast_3_day_demand,lead_time_demand,safety_stock,reorder_point,recommended_reorder_qty,urgency,recommendation
+SKU002,Table Lamp,Lighting,5,11.35,17.857142857142858,3.5714285714285716,21.42857142857143,16.42857142857143,High,Stock below lead-time demand - reorder immediately
+SKU003,Cushion Set,Home Decor,6,12.72,12.642857142857142,2.5285714285714285,15.17142857142857,9.17142857142857,High,Stock below lead-time demand - reorder immediately
+SKU001,Wooden Chair,Furniture,11,6.35,14.500000000000002,2.9000000000000004,17.400000000000002,6.400000000000002,High,Stock below lead-time demand - reorder immediately
