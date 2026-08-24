@@ -1,0 +1,4 @@
+fold,train_end_period,test_start_period,test_end_period,train_weeks,n_train_rows,n_test_rows,baseline_evaluable_rows,model_evaluable
+1,2025-W04,2025-W05,2025-W12,56,1680,240,240,True
+2,2025-W12,2025-W13,2025-W20,64,1920,240,240,True
+3,2025-W20,2025-W21,2025-W28,72,2160,240,240,True

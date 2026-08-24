@@ -1,0 +1,968 @@
+{
+  "cleaning_decisions": [
+    {
+      "action": "parse dates",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "pd.to_datetime(errors='coerce')",
+      "issue": "date column text/raw",
+      "number_affected": 0,
+      "reason": "official contract requires datetime date"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "units_sold numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric measure"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "revenue numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric measure"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "unit_price numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric measure"
+    },
+    {
+      "action": "normalize to 0/1",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "normalize 1/0, true/false, yes/no",
+      "issue": "promo_flag boolean-like",
+      "number_affected": 0,
+      "reason": "official contract expects boolean-like promo indicator"
+    },
+    {
+      "action": "no action",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df.duplicated(keep='first') on all columns",
+      "issue": "exact duplicate rows",
+      "number_affected": 0,
+      "reason": "exact duplicates are safe to dedupe deterministically; business-key conflicts are handled separately"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['date'].isna()",
+      "issue": "nulls in 'date'",
+      "number_affected": 0,
+      "reason": "'date' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['sku_id'].isna()",
+      "issue": "nulls in 'sku_id'",
+      "number_affected": 0,
+      "reason": "'sku_id' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "preserve (report to data-quality memo)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['units_sold'].isna()",
+      "issue": "nulls in 'units_sold'",
+      "number_affected": 0,
+      "reason": "missing units_sold cannot be safely derived from the row/table; no invention"
+    },
+    {
+      "action": "preserve (report to data-quality memo)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['revenue'].isna()",
+      "issue": "nulls in 'revenue'",
+      "number_affected": 0,
+      "reason": "missing revenue cannot be safely derived from the row/table; no invention"
+    },
+    {
+      "action": "preserve (report to data-quality memo)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['unit_price'].isna()",
+      "issue": "nulls in 'unit_price'",
+      "number_affected": 0,
+      "reason": "missing unit_price cannot be safely derived from the row/table; no invention"
+    },
+    {
+      "action": "preserve (report to data-quality memo)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['promo_flag'].isna()",
+      "issue": "nulls in 'promo_flag'",
+      "number_affected": 0,
+      "reason": "missing promo_flag cannot be safely derived from the row/table; no invention"
+    },
+    {
+      "action": "parse dates",
+      "changed": true,
+      "dataset": "sku_master",
+      "detection_rule": "pd.to_datetime(errors='coerce')",
+      "issue": "launch_date column text/raw",
+      "number_affected": 0,
+      "reason": "official contract requires launch_date as date"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sku_master",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "unit_cost numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric cost/price"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sku_master",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "list_price numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric cost/price"
+    },
+    {
+      "action": "no action",
+      "changed": false,
+      "dataset": "sku_master",
+      "detection_rule": "df.duplicated(keep='first') on all columns",
+      "issue": "exact duplicate rows",
+      "number_affected": 0,
+      "reason": "exact duplicates are safe to dedupe deterministically; business-key conflicts are handled separately"
+    },
+    {
+      "action": "report for review (rows preserved)",
+      "changed": false,
+      "dataset": "sku_master",
+      "detection_rule": "df.duplicated(subset=['sku_id'], keep='first')",
+      "issue": "business-key duplicates on 'sku_id'",
+      "number_affected": 0,
+      "reason": "no unambiguous, data-supported rule exists to choose one row over another; a reviewer must resolve this"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "sku_master",
+      "detection_rule": "df['sku_id'].isna()",
+      "issue": "nulls in 'sku_id'",
+      "number_affected": 0,
+      "reason": "'sku_id' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "parse dates",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "pd.to_datetime(errors='coerce')",
+      "issue": "date column text/raw",
+      "number_affected": 0,
+      "reason": "official contract requires datetime date"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "week numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires week/month as numbers"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "month numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires week/month as numbers"
+    },
+    {
+      "action": "normalize to 0/1",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "normalize 1/0, true/false, yes/no",
+      "issue": "is_holiday boolean-like",
+      "number_affected": 0,
+      "reason": "official contract expects boolean-like holiday indicator"
+    },
+    {
+      "action": "blank -> NaN (preservation; no invention)",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "'' / whitespace-only string",
+      "issue": "promo_event blank strings",
+      "number_affected": 0,
+      "reason": "blank promo_event means no event, not a value to invent"
+    },
+    {
+      "action": "no action",
+      "changed": false,
+      "dataset": "calendar",
+      "detection_rule": "df.duplicated(keep='first') on all columns",
+      "issue": "exact duplicate rows",
+      "number_affected": 0,
+      "reason": "exact duplicates are safe to dedupe deterministically; business-key conflicts are handled separately"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "calendar",
+      "detection_rule": "df['date'].isna()",
+      "issue": "nulls in 'date'",
+      "number_affected": 0,
+      "reason": "'date' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "parse dates",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_datetime(errors='coerce')",
+      "issue": "date column text/raw",
+      "number_affected": 0,
+      "reason": "official contract requires datetime date"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "on_hand_units numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric inventory fields"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "on_order_units numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric inventory fields"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "lead_time_days numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric inventory fields"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "reorder_point numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric inventory fields"
+    },
+    {
+      "action": "no action",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "df.duplicated(keep='first') on all columns",
+      "issue": "exact duplicate rows",
+      "number_affected": 0,
+      "reason": "exact duplicates are safe to dedupe deterministically; business-key conflicts are handled separately"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "df['date'].isna()",
+      "issue": "nulls in 'date'",
+      "number_affected": 0,
+      "reason": "'date' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "df['sku_id'].isna()",
+      "issue": "nulls in 'sku_id'",
+      "number_affected": 0,
+      "reason": "'sku_id' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "parse dates",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "pd.to_datetime(errors='coerce')",
+      "issue": "date column text/raw",
+      "number_affected": 0,
+      "reason": "official contract requires datetime date"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "units_sold numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric measure"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "revenue numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric measure"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "unit_price numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric measure"
+    },
+    {
+      "action": "normalize to 0/1",
+      "changed": true,
+      "dataset": "sales_daily",
+      "detection_rule": "normalize 1/0, true/false, yes/no",
+      "issue": "promo_flag boolean-like",
+      "number_affected": 0,
+      "reason": "official contract expects boolean-like promo indicator"
+    },
+    {
+      "action": "no action",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df.duplicated(keep='first') on all columns",
+      "issue": "exact duplicate rows",
+      "number_affected": 0,
+      "reason": "exact duplicates are safe to dedupe deterministically; business-key conflicts are handled separately"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['date'].isna()",
+      "issue": "nulls in 'date'",
+      "number_affected": 0,
+      "reason": "'date' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['sku_id'].isna()",
+      "issue": "nulls in 'sku_id'",
+      "number_affected": 0,
+      "reason": "'sku_id' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "preserve (report to data-quality memo)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['units_sold'].isna()",
+      "issue": "nulls in 'units_sold'",
+      "number_affected": 0,
+      "reason": "missing units_sold cannot be safely derived from the row/table; no invention"
+    },
+    {
+      "action": "preserve (report to data-quality memo)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['revenue'].isna()",
+      "issue": "nulls in 'revenue'",
+      "number_affected": 0,
+      "reason": "missing revenue cannot be safely derived from the row/table; no invention"
+    },
+    {
+      "action": "preserve (report to data-quality memo)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['unit_price'].isna()",
+      "issue": "nulls in 'unit_price'",
+      "number_affected": 0,
+      "reason": "missing unit_price cannot be safely derived from the row/table; no invention"
+    },
+    {
+      "action": "preserve (report to data-quality memo)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "df['promo_flag'].isna()",
+      "issue": "nulls in 'promo_flag'",
+      "number_affected": 0,
+      "reason": "missing promo_flag cannot be safely derived from the row/table; no invention"
+    },
+    {
+      "action": "flag for review (rows preserved, NOT fixed)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "units_sold < 0 (after type cleaning)",
+      "issue": "negative values in 'units_sold'",
+      "number_affected": 0,
+      "reason": "inventing replacement values is forbidden; a reviewer resolves alongside the data-quality memo"
+    },
+    {
+      "action": "flag for review (rows preserved, NOT fixed)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "revenue < 0 (after type cleaning)",
+      "issue": "negative values in 'revenue'",
+      "number_affected": 0,
+      "reason": "inventing replacement values is forbidden; a reviewer resolves alongside the data-quality memo"
+    },
+    {
+      "action": "flag for review (rows preserved, NOT fixed)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "unit_price < 0 (after type cleaning)",
+      "issue": "negative values in 'unit_price'",
+      "number_affected": 0,
+      "reason": "inventing replacement values is forbidden; a reviewer resolves alongside the data-quality memo"
+    },
+    {
+      "action": "flag for review (rows preserved)",
+      "changed": false,
+      "dataset": "sales_daily",
+      "detection_rule": "promo_flag not in {0, 1} after normalization",
+      "issue": "promo_flag invalid boolean-like",
+      "number_affected": 0,
+      "reason": "invalid promo indicator cannot be repaired from the row"
+    },
+    {
+      "action": "parse dates",
+      "changed": true,
+      "dataset": "sku_master",
+      "detection_rule": "pd.to_datetime(errors='coerce')",
+      "issue": "launch_date column text/raw",
+      "number_affected": 0,
+      "reason": "official contract requires launch_date as date"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sku_master",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "unit_cost numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric cost/price"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "sku_master",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "list_price numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric cost/price"
+    },
+    {
+      "action": "no action",
+      "changed": false,
+      "dataset": "sku_master",
+      "detection_rule": "df.duplicated(keep='first') on all columns",
+      "issue": "exact duplicate rows",
+      "number_affected": 0,
+      "reason": "exact duplicates are safe to dedupe deterministically; business-key conflicts are handled separately"
+    },
+    {
+      "action": "report for review (rows preserved)",
+      "changed": false,
+      "dataset": "sku_master",
+      "detection_rule": "df.duplicated(subset=['sku_id'], keep='first')",
+      "issue": "business-key duplicates on 'sku_id'",
+      "number_affected": 0,
+      "reason": "no unambiguous, data-supported rule exists to choose one row over another; a reviewer must resolve this"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "sku_master",
+      "detection_rule": "df['sku_id'].isna()",
+      "issue": "nulls in 'sku_id'",
+      "number_affected": 0,
+      "reason": "'sku_id' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "flag for review (rows preserved, NOT fixed)",
+      "changed": false,
+      "dataset": "sku_master",
+      "detection_rule": "unit_cost < 0 (after type cleaning)",
+      "issue": "negative values in 'unit_cost'",
+      "number_affected": 0,
+      "reason": "inventing replacement values is forbidden; a reviewer resolves alongside the data-quality memo"
+    },
+    {
+      "action": "flag for review (rows preserved, NOT fixed)",
+      "changed": false,
+      "dataset": "sku_master",
+      "detection_rule": "list_price < 0 (after type cleaning)",
+      "issue": "negative values in 'list_price'",
+      "number_affected": 0,
+      "reason": "inventing replacement values is forbidden; a reviewer resolves alongside the data-quality memo"
+    },
+    {
+      "action": "flag for review (rows preserved)",
+      "changed": false,
+      "dataset": "sku_master",
+      "detection_rule": "launch_date is null after parsing",
+      "issue": "launch_date invalid/unparseable",
+      "number_affected": 0,
+      "reason": "launch date cannot be repaired from the row"
+    },
+    {
+      "action": "parse dates",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "pd.to_datetime(errors='coerce')",
+      "issue": "date column text/raw",
+      "number_affected": 0,
+      "reason": "official contract requires datetime date"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "week numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires week/month as numbers"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "month numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires week/month as numbers"
+    },
+    {
+      "action": "normalize to 0/1",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "normalize 1/0, true/false, yes/no",
+      "issue": "is_holiday boolean-like",
+      "number_affected": 0,
+      "reason": "official contract expects boolean-like holiday indicator"
+    },
+    {
+      "action": "blank -> NaN (preservation; no invention)",
+      "changed": true,
+      "dataset": "calendar",
+      "detection_rule": "'' / whitespace-only string",
+      "issue": "promo_event blank strings",
+      "number_affected": 0,
+      "reason": "blank promo_event means no event, not a value to invent"
+    },
+    {
+      "action": "no action",
+      "changed": false,
+      "dataset": "calendar",
+      "detection_rule": "df.duplicated(keep='first') on all columns",
+      "issue": "exact duplicate rows",
+      "number_affected": 0,
+      "reason": "exact duplicates are safe to dedupe deterministically; business-key conflicts are handled separately"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "calendar",
+      "detection_rule": "df['date'].isna()",
+      "issue": "nulls in 'date'",
+      "number_affected": 0,
+      "reason": "'date' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "flag for review (rows preserved)",
+      "changed": false,
+      "dataset": "calendar",
+      "detection_rule": "week not in 1..53 after type cleaning",
+      "issue": "week outside valid range",
+      "number_affected": 0,
+      "reason": "calendar week cannot be repaired from the row"
+    },
+    {
+      "action": "flag for review (rows preserved)",
+      "changed": false,
+      "dataset": "calendar",
+      "detection_rule": "month not in 1..12 after type cleaning",
+      "issue": "month outside valid range",
+      "number_affected": 0,
+      "reason": "calendar month cannot be repaired from the row"
+    },
+    {
+      "action": "flag for review (rows preserved)",
+      "changed": false,
+      "dataset": "calendar",
+      "detection_rule": "is_holiday not in {0, 1} after normalization",
+      "issue": "is_holiday invalid boolean-like",
+      "number_affected": 0,
+      "reason": "invalid holiday indicator cannot be repaired from the row"
+    },
+    {
+      "action": "parse dates",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_datetime(errors='coerce')",
+      "issue": "date column text/raw",
+      "number_affected": 0,
+      "reason": "official contract requires datetime date"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "on_hand_units numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric inventory fields"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "on_order_units numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric inventory fields"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "lead_time_days numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric inventory fields"
+    },
+    {
+      "action": "coerce to numeric",
+      "changed": true,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "pd.to_numeric(errors='coerce')",
+      "issue": "reorder_point numeric type",
+      "number_affected": 0,
+      "reason": "official contract requires numeric inventory fields"
+    },
+    {
+      "action": "no action",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "df.duplicated(keep='first') on all columns",
+      "issue": "exact duplicate rows",
+      "number_affected": 0,
+      "reason": "exact duplicates are safe to dedupe deterministically; business-key conflicts are handled separately"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "df['date'].isna()",
+      "issue": "nulls in 'date'",
+      "number_affected": 0,
+      "reason": "'date' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "drop row (required key column)",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "df['sku_id'].isna()",
+      "issue": "nulls in 'sku_id'",
+      "number_affected": 0,
+      "reason": "'sku_id' is a required business key; a row without it has no identifiable subject, so exclusion is deterministic"
+    },
+    {
+      "action": "flag for review (rows preserved, NOT fixed)",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "on_hand_units < 0 (after type cleaning)",
+      "issue": "negative values in 'on_hand_units'",
+      "number_affected": 0,
+      "reason": "inventing replacement values is forbidden; a reviewer resolves alongside the data-quality memo"
+    },
+    {
+      "action": "flag for review (rows preserved, NOT fixed)",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "on_order_units < 0 (after type cleaning)",
+      "issue": "negative values in 'on_order_units'",
+      "number_affected": 0,
+      "reason": "inventing replacement values is forbidden; a reviewer resolves alongside the data-quality memo"
+    },
+    {
+      "action": "flag for review (rows preserved, NOT fixed)",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "lead_time_days < 0 (after type cleaning)",
+      "issue": "negative values in 'lead_time_days'",
+      "number_affected": 0,
+      "reason": "inventing replacement values is forbidden; a reviewer resolves alongside the data-quality memo"
+    },
+    {
+      "action": "flag for review (rows preserved, NOT fixed)",
+      "changed": false,
+      "dataset": "inventory_snapshots",
+      "detection_rule": "reorder_point < 0 (after type cleaning)",
+      "issue": "negative values in 'reorder_point'",
+      "number_affected": 0,
+      "reason": "inventing replacement values is forbidden; a reviewer resolves alongside the data-quality memo"
+    },
+    {
+      "action": "report only (no fabrication, no filling)",
+      "changed": false,
+      "dataset": "cross_table",
+      "detection_rule": "set difference / duplicated() across extracts",
+      "issue": "sales SKUs absent from sku_master",
+      "number_affected": 0,
+      "reason": "relationships are validated and surfaced for review; creating missing master/calendar rows is forbidden"
+    },
+    {
+      "action": "report only (no fabrication, no filling)",
+      "changed": false,
+      "dataset": "cross_table",
+      "detection_rule": "set difference / duplicated() across extracts",
+      "issue": "inventory SKUs absent from sku_master",
+      "number_affected": 0,
+      "reason": "relationships are validated and surfaced for review; creating missing master/calendar rows is forbidden"
+    },
+    {
+      "action": "report only (no fabrication, no filling)",
+      "changed": false,
+      "dataset": "cross_table",
+      "detection_rule": "set difference / duplicated() across extracts",
+      "issue": "duplicate sku_master keys",
+      "number_affected": 0,
+      "reason": "relationships are validated and surfaced for review; creating missing master/calendar rows is forbidden"
+    },
+    {
+      "action": "report only (no fabrication, no filling)",
+      "changed": false,
+      "dataset": "cross_table",
+      "detection_rule": "set difference / duplicated() across extracts",
+      "issue": "sales dates outside calendar coverage",
+      "number_affected": 0,
+      "reason": "relationships are validated and surfaced for review; creating missing master/calendar rows is forbidden"
+    },
+    {
+      "action": "report only (no fabrication, no filling)",
+      "changed": false,
+      "dataset": "cross_table",
+      "detection_rule": "set difference / duplicated() across extracts",
+      "issue": "inventory dates outside calendar coverage",
+      "number_affected": 0,
+      "reason": "relationships are validated and surfaced for review; creating missing master/calendar rows is forbidden"
+    },
+    {
+      "action": "report only (no fabrication, no filling)",
+      "changed": false,
+      "dataset": "cross_table",
+      "detection_rule": "set difference / duplicated() across extracts",
+      "issue": "calendar dates without any sales row",
+      "number_affected": 0,
+      "reason": "relationships are validated and surfaced for review; creating missing master/calendar rows is forbidden"
+    },
+    {
+      "action": "report only (no fabrication, no filling)",
+      "changed": false,
+      "dataset": "cross_table",
+      "detection_rule": "set difference / duplicated() across extracts",
+      "issue": "missing SKU/date combinations in sales panel",
+      "number_affected": 0,
+      "reason": "relationships are validated and surfaced for review; creating missing master/calendar rows is forbidden"
+    },
+    {
+      "action": "report only (no fabrication, no filling)",
+      "changed": false,
+      "dataset": "cross_table",
+      "detection_rule": "set difference / duplicated() across extracts",
+      "issue": "missing SKU/date combinations in inventory panel",
+      "number_affected": 0,
+      "reason": "relationships are validated and surfaced for review; creating missing master/calendar rows is forbidden"
+    }
+  ],
+  "cross_table": {
+    "calendar_dates_missing_from_series": [],
+    "duplicate_sku_keys": [],
+    "inventory_dates_outside_calendar": [],
+    "inventory_missing_sku_date_combos": [],
+    "inventory_skus_missing_in_master": [],
+    "sales_dates_outside_calendar": [],
+    "sales_missing_sku_date_combos": [],
+    "sales_skus_missing_in_master": []
+  },
+  "generated_at_utc": "2026-08-24T16:43:39.258523Z",
+  "policy_note": "Missing values: business keys dropped deterministically; all other fields preserved and reported. No value was invented.",
+  "report": "D1 data-quality & cleaning decisions",
+  "validation": {
+    "calendar": {
+      "business_key_duplicate_rows": 0,
+      "column_count": 6,
+      "columns": [
+        "date",
+        "week",
+        "month",
+        "season",
+        "is_holiday",
+        "promo_event"
+      ],
+      "dataset": "calendar",
+      "date_range": [
+        "2024-01-01",
+        "2025-07-13"
+      ],
+      "dtypes": {
+        "date": "datetime64[us]",
+        "is_holiday": "Int64",
+        "month": "int64",
+        "promo_event": "str",
+        "season": "str",
+        "week": "int64"
+      },
+      "duplicate_columns": [],
+      "exact_duplicate_rows": 0,
+      "file": "('date', 'week', 'month', 'season', 'is_holiday', 'promo_event')",
+      "invalid_value_counts": {},
+      "missing_columns": [],
+      "null_counts": {
+        "date": 0,
+        "is_holiday": 0,
+        "month": 0,
+        "promo_event": 510,
+        "season": 0,
+        "week": 0
+      },
+      "row_count": 560,
+      "unexpected_columns": []
+    },
+    "inventory_snapshots": {
+      "business_key_duplicate_rows": 0,
+      "column_count": 6,
+      "columns": [
+        "date",
+        "sku_id",
+        "on_hand_units",
+        "on_order_units",
+        "lead_time_days",
+        "reorder_point"
+      ],
+      "dataset": "inventory_snapshots",
+      "date_range": [
+        "2024-01-01",
+        "2025-07-13"
+      ],
+      "dtypes": {
+        "date": "datetime64[us]",
+        "lead_time_days": "int64",
+        "on_hand_units": "int64",
+        "on_order_units": "int64",
+        "reorder_point": "int64",
+        "sku_id": "str"
+      },
+      "duplicate_columns": [],
+      "exact_duplicate_rows": 0,
+      "file": "('date', 'sku_id', 'on_hand_units', 'on_order_units', 'lead_time_days', 'reorder_point')",
+      "invalid_value_counts": {},
+      "missing_columns": [],
+      "null_counts": {
+        "date": 0,
+        "lead_time_days": 0,
+        "on_hand_units": 0,
+        "on_order_units": 0,
+        "reorder_point": 0,
+        "sku_id": 0
+      },
+      "row_count": 16800,
+      "unexpected_columns": []
+    },
+    "sales_daily": {
+      "business_key_duplicate_rows": 0,
+      "column_count": 6,
+      "columns": [
+        "date",
+        "sku_id",
+        "units_sold",
+        "revenue",
+        "unit_price",
+        "promo_flag"
+      ],
+      "dataset": "sales_daily",
+      "date_range": [
+        "2024-01-01",
+        "2025-07-13"
+      ],
+      "dtypes": {
+        "date": "datetime64[us]",
+        "promo_flag": "Int64",
+        "revenue": "float64",
+        "sku_id": "str",
+        "unit_price": "float64",
+        "units_sold": "int64"
+      },
+      "duplicate_columns": [],
+      "exact_duplicate_rows": 0,
+      "file": "('date', 'sku_id', 'units_sold', 'revenue', 'unit_price', 'promo_flag')",
+      "invalid_value_counts": {},
+      "missing_columns": [],
+      "null_counts": {
+        "date": 0,
+        "promo_flag": 0,
+        "revenue": 0,
+        "sku_id": 0,
+        "unit_price": 0,
+        "units_sold": 0
+      },
+      "row_count": 16800,
+      "unexpected_columns": []
+    },
+    "sku_master": {
+      "business_key_duplicate_rows": 0,
+      "column_count": 6,
+      "columns": [
+        "sku_id",
+        "category",
+        "subcategory",
+        "launch_date",
+        "unit_cost",
+        "list_price"
+      ],
+      "dataset": "sku_master",
+      "date_range": null,
+      "dtypes": {
+        "category": "str",
+        "launch_date": "datetime64[us]",
+        "list_price": "float64",
+        "sku_id": "str",
+        "subcategory": "str",
+        "unit_cost": "float64"
+      },
+      "duplicate_columns": [],
+      "exact_duplicate_rows": 0,
+      "file": "('sku_id', 'category', 'subcategory', 'launch_date', 'unit_cost', 'list_price')",
+      "invalid_value_counts": {},
+      "missing_columns": [],
+      "null_counts": {
+        "category": 0,
+        "launch_date": 0,
+        "list_price": 0,
+        "sku_id": 0,
+        "subcategory": 0,
+        "unit_cost": 0
+      },
+      "row_count": 30,
+      "unexpected_columns": []
+    }
+  }
+}

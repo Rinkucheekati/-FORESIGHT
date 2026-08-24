@@ -1,4 +1,31 @@
-sku_id,product_name,category,unit_price,lead_time_days
-SKU001,Wooden Chair,Furniture,2500,7
-SKU002,Table Lamp,Lighting,1200,5
-SKU003,Cushion Set,Home Decor,800,3
+sku_id,category,subcategory,launch_date,unit_cost,list_price
+SKU-001,Home,Kitchen,2023-10-01,5.04,12.0
+SKU-002,Apparel,Basics,2023-10-03,9.33,20.5
+SKU-003,Personal Care,Bath,2023-10-05,14.21,29.0
+SKU-004,Electronics,Audio,2023-10-07,19.69,37.5
+SKU-005,Home,Bedding,2023-10-09,25.76,46.0
+SKU-006,Apparel,Outerwear,2023-10-11,22.89,54.5
+SKU-007,Personal Care,Hair,2023-10-13,28.66,63.0
+SKU-008,Electronics,Mobile,2023-10-15,35.03,71.5
+SKU-009,Home,Decor,2023-10-17,42.0,80.0
+SKU-010,Apparel,Accessories,2023-10-19,49.56,88.5
+SKU-011,Personal Care,Wellness,2023-10-21,6.4,15.25
+SKU-012,Electronics,Accessories,2023-10-23,10.81,23.75
+SKU-013,Home,Kitchen,2023-10-25,15.8,32.25
+SKU-014,Apparel,Basics,2023-10-27,21.39,40.75
+SKU-015,Personal Care,Bath,2023-10-29,27.58,49.25
+SKU-016,Electronics,Audio,2023-10-31,24.25,57.75
+SKU-017,Home,Bedding,2023-11-02,30.14,66.25
+SKU-018,Apparel,Outerwear,2023-11-04,36.63,74.75
+SKU-019,Personal Care,Hair,2023-11-06,43.71,83.25
+SKU-020,Electronics,Mobile,2023-11-08,51.38,91.75
+SKU-021,Home,Decor,2023-11-10,7.77,18.5
+SKU-022,Apparel,Accessories,2023-11-12,12.28,27.0
+SKU-023,Personal Care,Wellness,2023-11-14,17.39,35.5
+SKU-024,Electronics,Accessories,2023-11-16,23.1,44.0
+SKU-025,Home,Kitchen,2023-11-18,29.4,52.5
+SKU-026,Apparel,Basics,2023-11-20,25.62,61.0
+SKU-027,Personal Care,Bath,2023-11-22,31.62,69.5
+SKU-028,Electronics,Audio,2023-11-24,38.22,78.0
+SKU-029,Home,Bedding,2023-11-26,45.41,86.5
+SKU-030,Apparel,Outerwear,2023-11-28,53.2,95.0

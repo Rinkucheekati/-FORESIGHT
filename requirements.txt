@@ -17,3 +17,16 @@ streamlit==1.40.2
 
 # Jupyter notebooks
 jupyter==1.0.0
+
+# ---------------------------------------------------------------------------
+# D6 — Official FORESIGHT scoring service (added STEP 8)
+# Versions below match the project venv used for verification.
+# Existing pins above are legacy-era and intentionally left untouched.
+# ---------------------------------------------------------------------------
+fastapi==0.141.1
+pydantic==2.13.4
+uvicorn==0.52.4
+httpx==0.28.1
+
+# D7 executive readout generation
+python-pptx==1.0.2

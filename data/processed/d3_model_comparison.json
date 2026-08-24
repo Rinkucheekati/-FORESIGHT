@@ -1,0 +1,20 @@
+{
+  "baseline": {
+    "bias": -0.8208333333333333,
+    "evaluated_rows": 720,
+    "mape": 0.3714437401806794,
+    "name": "seasonal_naive",
+    "seasonal_period_weeks": 52,
+    "wape": 0.2423955282451808
+  },
+  "improvement_vs_baseline_wape": 0.20201206440752037,
+  "model": {
+    "bias": -1.1622663012296408,
+    "evaluated_rows": 720,
+    "mape": 0.7272770436291814,
+    "name": "hist_gradient_boosting",
+    "random_seed": 42,
+    "wape": 0.1934287071812204
+  },
+  "same_windows": true
+}

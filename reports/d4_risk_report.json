@@ -1,0 +1,95 @@
+{
+  "configuration_assumptions": {
+    "coverage_target_weeks": 4.0,
+    "low_history_weeks": 4,
+    "markdown_clear_overstock_min": 0.5,
+    "min_history_weeks": 8,
+    "note": "numeric thresholds below are implementation configuration assumptions, NOT rules supplied by Zidio",
+    "overstock_coverage_weeks": 8.0,
+    "reorder_now_stockout_min": 0.5,
+    "stockout_ratio_threshold": 1.0,
+    "volatility_cv_high": 0.5
+  },
+  "data_status": "READY",
+  "decision_summary": {
+    "counts": {
+      "HEALTHY": 6,
+      "MARKDOWN_CLEAR": 7,
+      "REORDER_NOW": 17,
+      "WATCH_VOLATILE": 0
+    },
+    "grid": [
+      "REORDER_NOW",
+      "MARKDOWN_CLEAR",
+      "WATCH_VOLATILE",
+      "HEALTHY"
+    ]
+  },
+  "forecast_integration": {
+    "note": "Official D3 weekly forecast loaded.",
+    "status": "AVAILABLE"
+  },
+  "generated_at_utc": "2026-08-24T17:29:49.313300Z",
+  "input_quality_issues": [
+    {
+      "affected_rows": 0,
+      "detail": "",
+      "issue": "duplicate_sku_date_records"
+    },
+    {
+      "affected_rows": 0,
+      "detail": "",
+      "issue": "skus_missing_from_master"
+    }
+  ],
+  "inventory_summary": {
+    "skus_scored": 30,
+    "total_inventory_position_units": 3279.0,
+    "total_on_hand_units": 2729.0,
+    "total_on_order_units": 550.0
+  },
+  "limitations": [
+    "Risk scores reflect configured thresholds documented in 'configuration_assumptions'; they are operational defaults, not Zidio-supplied business rules.",
+    "Rupee exposure uses cost-basis valuation; lost-revenue valuation would need a service-level assumption Zidio has not provided.",
+    "Coverage/correlation observations are not causal claims."
+  ],
+  "low_history_summary": {
+    "count": 0,
+    "handling": "insufficient-data SKUs are placed in WATCH_VOLATILE with no precise scores; low-history SKUs are flagged and reported without fabricated precision",
+    "sku_ids": []
+  },
+  "missing_d1_outputs": null,
+  "official_requirements": [
+    "two-axis risk (stockout AND overstock)",
+    "rupee value at stake",
+    "four-cell decision grid: REORDER_NOW / MARKDOWN_CLEAR / WATCH_VOLATILE / HEALTHY",
+    "official fields only; new-SKU/low-history confidence flags"
+  ],
+  "output_files": {
+    "inventory_risk": "data\\processed\\inventory_risk.csv",
+    "recommendations": "data\\processed\\recommendations.csv"
+  },
+  "overstock_risk_summary": {
+    "mean_overstock_risk": 0.2114712392557842,
+    "skus_with_excess": 9
+  },
+  "prioritised_sku_count": 30,
+  "project": "Project FORESIGHT \u2014 D4 Inventory Risk & Decision Engine",
+  "recommendation_counts": {
+    "HEALTHY": 6,
+    "MARKDOWN_CLEAR": 7,
+    "REORDER_NOW": 17,
+    "WATCH_VOLATILE": 0
+  },
+  "rupee_value_summary": {
+    "total_inventory_value_exposure_rupees": 44721.42760802563,
+    "total_rupee_value_at_stake": 116126.41511539652,
+    "total_stockout_shortfall_rupees": 71404.98750737088,
+    "valuation_basis": "official unit_cost (cost basis)"
+  },
+  "stockout_risk_summary": {
+    "mean_stockout_risk": 0.47387724227318084,
+    "skus_with_shortfall": 19
+  },
+  "synthetic_data_disclaimer": "Synthetic development data only. These risk scores, decisions, recommendations, and rupee values are not official Zidio or NorthBay Living results."
+}

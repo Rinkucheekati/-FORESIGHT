@@ -5,3 +5,13 @@ __pycache__/
 .streamlit/secrets.toml
 .env
 .env.*
+
+# =============================================================================
+# Project FORESIGHT — protect client data & derived artifacts
+# The official internship extracts under data/raw/ are client data and must
+# never be committed to git. Serialized model artifacts are excluded as well.
+# =============================================================================
+data/raw/
+*.pkl
+*.joblib
+service/.env

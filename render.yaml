@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: foresight-dashboard
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app/app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
+    healthCheckPath: /_stcore/health
+
+  - type: web
+    name: foresight-scoring-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn service.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
