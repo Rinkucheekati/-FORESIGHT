@@ -1,7 +1,12 @@
-"""Run D4 inventory risk scoring on synthetic development data.
+"""Run D4 inventory risk scoring on the official FORESIGHT data.
 
-All calculations are delegated to ``src.risk``. The resulting files are
-synthetic development artifacts, not official Zidio or NorthBay Living results.
+All calculations are delegated to ``src.risk``. D4 reads the official D1
+analysis-ready outputs and the official D3 weekly forecasts (upstream: the
+official retail dataset provided for Project FORESIGHT, reduced
+deterministically to 25,000 transactions, seed 42). Risk scores, decisions,
+recommendations, and rupee values are computed from that official data; they
+are model-derived planning recommendations, not official Zidio or NorthBay
+Living business results.
 """
 
 from __future__ import annotations
@@ -46,9 +51,12 @@ def main() -> None:
     scored = risk.score_all_skus(None, config, PROCESSED_DIR)
     report = risk.create_risk_report(scored, config)
     if scored.get("status") != risk.STATUS_READY:
-        report["synthetic_data_disclaimer"] = (
-            "Synthetic development data only. No risk score, decision, or "
-            "rupee value represents official Zidio or NorthBay Living results."
+        report["data_source_statement"] = (
+            "Data source: the official retail dataset provided for Project "
+            "FORESIGHT (deterministic 25,000-transaction selection, seed 42), "
+            "processed through the official D1 pipeline. D4 did not reach "
+            "READY status on this data, so no risk score, decision, or rupee "
+            "value here is a complete or official result."
         )
         REPORT_PATH.write_text(
             json.dumps(_jsonable(report), indent=2, sort_keys=True),
@@ -64,18 +72,34 @@ def main() -> None:
     ).reset_index(drop=True)
     rows.to_csv(RISK_PATH, index=False)
 
+    rows = rows.copy()
+    rows["recommendation"] = rows["decision"].map({
+        "REORDER_NOW": "Reorder now",
+        "MARKDOWN_CLEAR": "Markdown clear",
+        "WATCH_VOLATILE": "Watch volatile",
+        "HEALTHY": "Healthy",
+    }).fillna(rows["decision"])
+
+    priority_order = {"REORDER_NOW": "P1", "MARKDOWN_CLEAR": "P2", "WATCH_VOLATILE": "P3", "HEALTHY": "P4"}
+    rows["priority"] = rows["decision"].map(priority_order).fillna("P4")
+
     recommendation_columns = [
-        "sku_id", "category", "subcategory", "decision", "decision_reason",
-        "rupee_value_at_stake", "stockout_risk", "overstock_risk",
-        "coverage_weeks", "demand_rate_weekly", "forecast_rate_weekly",
+        "sku_id", "category", "subcategory", "decision", "recommendation",
+        "priority", "decision_reason", "rupee_value_at_stake",
+        "stockout_risk", "overstock_risk", "coverage_weeks",
+        "demand_rate_weekly", "forecast_rate_weekly",
         "preferred_demand_source", "data_quality_flag",
     ]
     rows[recommendation_columns].to_csv(RECOMMENDATIONS_PATH, index=False)
 
-    report["synthetic_data_disclaimer"] = (
-        "Synthetic development data only. These risk scores, decisions, "
-        "recommendations, and rupee values are not official Zidio or NorthBay "
-        "Living results."
+    report["data_source_statement"] = (
+        "Data source: the official retail dataset provided for Project "
+        "FORESIGHT (deterministic 25,000-transaction selection, seed 42), "
+        "processed through the official D1 pipeline with the official D3 "
+        "weekly forecasts. Risk scores, decisions, recommendations, and "
+        "rupee values are computed from this official data; they are "
+        "model-derived planning recommendations, not official Zidio or "
+        "NorthBay Living business results."
     )
     report["output_files"] = {
         "inventory_risk": str(RISK_PATH.relative_to(REPO_ROOT)),

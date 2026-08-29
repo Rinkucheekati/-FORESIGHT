@@ -1,27 +1,23 @@
-# Mini-FORESIGHT - Python Dependencies
+# Project FORESIGHT - Python Dependencies
 # Install with: pip install -r requirements.txt
+# All pins match the verified project environment (Python 3.13.15).
 
 # Data manipulation
-pandas==2.2.3
-numpy==1.26.4
+pandas==3.0.5
+numpy==2.5.2
 
-# Data visualization (for EDA)
-matplotlib==3.9.2
-seaborn==0.13.2
+# Data visualization (D2 EDA chart generation)
+matplotlib==3.11.1
 
 # Machine learning / forecasting
-scikit-learn==1.5.2
+scikit-learn==1.9.0
 
-# Interactive dashboard (used later in app/)
-streamlit==1.40.2
-
-# Jupyter notebooks
-jupyter==1.0.0
+# Interactive planning dashboard (D5, app/)
+streamlit==1.62.0
 
 # ---------------------------------------------------------------------------
-# D6 — Official FORESIGHT scoring service (added STEP 8)
-# Versions below match the project venv used for verification.
-# Existing pins above are legacy-era and intentionally left untouched.
+# D6 - Official FORESIGHT scoring service
+# Versions match the project venv used for verification.
 # ---------------------------------------------------------------------------
 fastapi==0.141.1
 pydantic==2.13.4

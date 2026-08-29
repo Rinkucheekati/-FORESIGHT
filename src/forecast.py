@@ -77,7 +77,7 @@ class LeakageError(D3Error):
 # --------------------------------------------------------------------------- #
 
 D1_OUTPUT_FILES = {
-    "sales_daily": "sales_daily_clean.csv",
+    "analysis_ready": "sales_analysis_ready.csv",
     "sku_master": "sku_master_clean.csv",
     "calendar": "calendar_clean.csv",
     "inventory_snapshots": "inventory_snapshots_clean.csv",
@@ -136,8 +136,8 @@ class ForecastConfig:
     model_params : dict
         Constructor overrides for the gradient-boosted-tree model.
     low_history_fallback : str
-        ``"seasonal_naive"`` (default) — sparse-history SKUs use the
-        seasonal-naive baseline; ``"none"`` disables the fallback.
+        ``"category_historical"`` (default) — sparse-history SKUs use
+        category-level historical demand; ``"none"`` disables the fallback.
     """
 
     horizon_weeks: int = 8
@@ -147,7 +147,7 @@ class ForecastConfig:
     min_obs_per_sku: int = 4
     random_seed: int = 42
     model_params: Dict[str, Any] = field(default_factory=dict)
-    low_history_fallback: str = "seasonal_naive"
+    low_history_fallback: str = "category_historical"
 
     def validate(self) -> None:
         if self.horizon_weeks < 1:
@@ -158,10 +158,10 @@ class ForecastConfig:
             raise ValueError("ForecastConfig.cv_folds must be >= 1.")
         if self.min_train_weeks < 1:
             raise ValueError("ForecastConfig.min_train_weeks must be >= 1.")
-        if self.low_history_fallback not in {"seasonal_naive", "none"}:
+        if self.low_history_fallback not in {"category_historical", "none"}:
             raise ValueError(
                 "ForecastConfig.low_history_fallback must be "
-                + "'seasonal_naive' or 'none'."
+                + "'category_historical' or 'none'."
             )
 
 
@@ -189,12 +189,12 @@ def prepare_weekly_demand(
 
     Raises ``MissingOfficialInputsError`` if D1 outputs are absent.
     """
-    required = ["sales_daily", "calendar", "sku_master"]
+    required = ["analysis_ready", "calendar", "sku_master"]
     missing = [k for k in required if k not in tables]
     if missing:
         raise MissingOfficialInputsError(missing, DATA_PROCESSED)
 
-    sales = tables["sales_daily"].copy()
+    sales = tables["analysis_ready"].copy()
     calendar = tables["calendar"].copy()
     sku_master = tables["sku_master"].copy()
 
@@ -226,8 +226,8 @@ def prepare_weekly_demand(
     else:
         weekly["promo"] = 0
 
-    # Calendar metadata: use the median day of each week-period if available,
-    # else fall back to week number. Join context from the official calendar.
+    # Calendar metadata is already present in the D1 analysis-ready table.
+    # Join only fields that are genuinely absent, avoiding duplicate context.
     cal = calendar.copy()
     iso_cal = cal["date"].dt.isocalendar()
     cal["iso_year"] = iso_cal["year"].astype("Int64")
@@ -244,15 +244,28 @@ def prepare_weekly_demand(
             promo_event=("promo_event", lambda s: s.dropna().iloc[0] if s.notna().any() else None),
         )
     )
-    weekly = weekly.merge(cal_context, on="period", how="left")
+    missing_calendar = [
+        col for col in ("month", "season", "is_holiday", "promo_event")
+        if col not in weekly.columns
+    ]
+    if missing_calendar:
+        weekly = weekly.merge(
+            cal_context[["period"] + missing_calendar], on="period", how="left"
+        )
 
     # SKU master static attributes (list_price is a static attribute; historical
     # unit_price is not used as a feature to avoid look-ahead).
     master_cols = ["sku_id", "category", "subcategory", "list_price"]
     master_cols = [c for c in master_cols if c in sku_master.columns]
-    weekly = weekly.merge(sku_master[master_cols], on="sku_id", how="left")
+    missing_master = [col for col in master_cols if col not in weekly.columns]
+    if missing_master:
+        weekly = weekly.merge(
+            sku_master[["sku_id"] + missing_master], on="sku_id", how="left"
+        )
 
     # Deterministic chronological ordering by SKU then week-period.
+    weekly["iso_year"] = pd.to_numeric(weekly["iso_year"], errors="coerce").astype(int)
+    weekly["iso_week"] = pd.to_numeric(weekly["iso_week"], errors="coerce").astype(int)
     weekly = weekly.sort_values(["sku_id", "iso_year", "iso_week"]).reset_index(drop=True)
     return weekly
 # --------------------------------------------------------------------------- #
@@ -713,7 +726,11 @@ def build_model(config: ForecastConfig = DEFAULT_CONFIG) -> HistGradientBoosting
     return HistGradientBoostingRegressor(**params)
 
 
-def _encode_categoricals(df: pd.DataFrame, feature_cols: List[str]) -> pd.DataFrame:
+def _encode_categoricals(
+    df: pd.DataFrame,
+    feature_cols: List[str],
+    mappings: Optional[Dict[str, Dict[str, int]]] = None,
+) -> pd.DataFrame:
     """Deterministic one-hot encoding of categorical feature columns.
 
     Uses fixed category ordering so folds are comparable and reproducible.
@@ -725,13 +742,25 @@ def _encode_categoricals(df: pd.DataFrame, feature_cols: List[str]) -> pd.DataFr
         if col not in out.columns:
             continue
         if not pd.api.types.is_numeric_dtype(out[col]):
-            cats = sorted(str(v) for v in out[col].dropna().unique())
-            mapping = {c: i + 1 for i, c in enumerate(cats)}  # NaN stays NaN
+            mapping = (mappings or {}).get(col)
+            if mapping is None:
+                cats = sorted(str(v) for v in out[col].dropna().unique())
+                mapping = {c: i + 1 for i, c in enumerate(cats)}
             out[col] = out[col].map(lambda v: mapping.get(str(v)) if pd.notna(v) else np.nan)
             out[col] = out[col].astype("float64")
         else:
             out[col] = out[col].astype("float64")
     return out
+
+
+def _category_mappings(df: pd.DataFrame, feature_cols: List[str]) -> Dict[str, Dict[str, int]]:
+    """Build one deterministic categorical encoding for a complete batch."""
+    mappings: Dict[str, Dict[str, int]] = {}
+    for col in feature_cols:
+        if col in df.columns and not pd.api.types.is_numeric_dtype(df[col]):
+            cats = sorted(str(v) for v in df[col].dropna().unique())
+            mappings[col] = {c: i + 1 for i, c in enumerate(cats)}
+    return mappings
 
 
 def _fit_predict_model(
@@ -764,6 +793,205 @@ def _fit_predict_model(
     test = features.loc[test_index]
     X_test = _encode_categoricals(test, feature_cols)[feature_cols]
     return model.predict(X_test)
+
+
+def _recursive_backtest_predictions(
+    features: pd.DataFrame,
+    train_mask: pd.Series,
+    test_periods: pd.DataFrame,
+    config: ForecastConfig,
+) -> Optional[pd.Series]:
+    """Predict a test window recursively so test actuals never become lags."""
+    feature_cols = [c for c in _FEATURE_COLUMNS if c in features.columns]
+    mappings = _category_mappings(features.loc[train_mask], feature_cols)
+    encoded_train = _encode_categoricals(features.loc[train_mask], feature_cols, mappings)
+    model = build_model(config)
+    if encoded_train.empty:
+        return None
+    feature_cols = [
+        column for column in feature_cols
+        if encoded_train[column].notna().any()
+        and encoded_train[column].nunique(dropna=True) >= 2
+    ]
+    if not feature_cols:
+        return None
+    model.fit(encoded_train[feature_cols], features.loc[train_mask, "units_sold"].astype("float64"))
+
+    train_features = features.loc[train_mask]
+    history_values = {
+        sku_id: group.sort_values(["iso_year", "iso_week"])["units_sold"].astype(float).tolist()
+        for sku_id, group in train_features.groupby("sku_id")
+    }
+    predictions: Dict[int, float] = {}
+    for period in test_periods["period"]:
+        future = features[features["period"] == period].sort_values("sku_id")
+        rows = []
+        indices = []
+        for index, row in future.iterrows():
+            sku_id = row["sku_id"]
+            values_for_sku = history_values.setdefault(sku_id, [])
+            values = {
+                "lag_1_week": values_for_sku[-1] if len(values_for_sku) >= 1 else np.nan,
+                "lag_2_week": values_for_sku[-2] if len(values_for_sku) >= 2 else np.nan,
+                "lag_4_week": values_for_sku[-4] if len(values_for_sku) >= 4 else np.nan,
+                "lag_8_week": values_for_sku[-8] if len(values_for_sku) >= 8 else np.nan,
+                "lag_13_week": values_for_sku[-13] if len(values_for_sku) >= 13 else np.nan,
+                "rolling_mean_4": np.mean(values_for_sku[-4:]) if values_for_sku else np.nan,
+                "rolling_mean_8": np.mean(values_for_sku[-8:]) if values_for_sku else np.nan,
+                "rolling_std_4": np.std(values_for_sku[-4:]) if len(values_for_sku) >= 2 else np.nan,
+                "rolling_std_8": np.std(values_for_sku[-8:]) if len(values_for_sku) >= 2 else np.nan,
+                "week_of_year": row.get("week_of_year", row.get("iso_week", np.nan)),
+            }
+            for column in feature_cols:
+                if column not in values:
+                    values[column] = row.get(column, np.nan)
+            rows.append(values)
+            indices.append((index, sku_id))
+        if rows:
+            encoded_rows = _encode_categoricals(pd.DataFrame(rows), feature_cols, mappings)
+            batch_predictions = model.predict(encoded_rows[feature_cols])
+            for (index, sku_id), prediction in zip(indices, batch_predictions):
+                value = max(0.0, float(prediction))
+                predictions[index] = value
+                history_values[sku_id].append(value)
+    return pd.Series(predictions, dtype="float64")
+
+
+def _category_fallback_predictions(
+    weekly: pd.DataFrame,
+    history_mask: pd.Series,
+    target_rows: pd.DataFrame,
+) -> pd.Series:
+    """Predict target rows using a cutoff-safe deterministic fallback hierarchy.
+
+    Hierarchy for each target row:
+      1. category seasonal historical rate for that ISO week using only history
+         observed before the target SKU's cutoff.
+      2. category trailing mean over pre-cutoff category demand.
+      3. same-SKU trailing mean over pre-cutoff SKU demand.
+      4. deterministic zero only if no historical demand information exists.
+
+    This prevents future leakage and guarantees finite, non-negative forecasts.
+    """
+    if weekly is None or weekly.empty or target_rows is None or target_rows.empty:
+        return pd.Series(index=target_rows.index, dtype="float64") if target_rows is not None else pd.Series(dtype="float64")
+
+    history = weekly.copy()
+    if isinstance(history_mask, pd.Series) and len(history_mask) == len(history):
+        history = history.loc[history_mask].copy()
+    elif isinstance(history_mask, (list, tuple, np.ndarray)):
+        history = history.loc[pd.Series(history_mask, index=history.index).fillna(False).to_numpy()].copy()
+
+    if "sku_id" in history.columns:
+        history["sku_id"] = history["sku_id"].astype(str)
+        history["_sku_key"] = history["sku_id"]
+    if "category" in history.columns:
+        history["category"] = history["category"].fillna("unknown").astype(str)
+        history["_category_key"] = history["category"]
+    else:
+        history["category"] = "unknown"
+    if "units_sold" in history.columns:
+        history["units_sold"] = pd.to_numeric(history["units_sold"], errors="coerce").fillna(0.0)
+    history["_year_num"] = pd.to_numeric(history["iso_year"], errors="coerce")
+    history["_week_num"] = pd.to_numeric(history["iso_week"], errors="coerce")
+
+    if history.empty:
+        zeros = pd.Series(0.0, index=target_rows.index, dtype="float64")
+        return zeros
+
+    target_index = target_rows.index
+    target = target_rows.copy().reset_index(drop=True)
+    if "sku_id" in target.columns:
+        target["sku_id"] = target["sku_id"].astype(str)
+    if "category" in target.columns:
+        target["category"] = target["category"].fillna("unknown").astype(str)
+    else:
+        target["category"] = "unknown"
+
+    cutoff_cache: Dict[str, Optional[Tuple[int, int]]] = {}
+    category_stats_cache: Dict[Tuple[str, Optional[Tuple[int, int]]], Tuple[Dict[int, float], float]] = {}
+    sku_trailing_cache: Dict[Tuple[str, Optional[Tuple[int, int]]], float] = {}
+
+    def _cutoff_for_sku(sku_id: str) -> Optional[Tuple[int, int]]:
+        if sku_id in cutoff_cache:
+            return cutoff_cache[sku_id]
+        g = history[history["_sku_key"] == sku_id]
+        if g.empty:
+            cutoff_cache[sku_id] = None
+            return None
+        g = g.assign(
+            _iso_year_num=g["_year_num"],
+            _iso_week_num=g["_week_num"],
+        ).sort_values(["_iso_year_num", "_iso_week_num"]).reset_index(drop=True)
+        last = g.iloc[-1]
+        cutoff_cache[sku_id] = (int(last["iso_year"]), int(last["iso_week"]))
+        return cutoff_cache[sku_id]
+
+    def _before_cutoff(g: pd.DataFrame, cutoff: Optional[Tuple[int, int]]) -> pd.DataFrame:
+        if g.empty or cutoff is None:
+            return g
+        cutoff_year, cutoff_week = cutoff
+        mask = (
+            (g["_year_num"] < cutoff_year)
+            | (
+                (g["_year_num"] == cutoff_year)
+                & (g["_week_num"] < cutoff_week)
+            )
+        )
+        return g.loc[mask].copy()
+
+    values: List[float] = []
+    for _, row in target.iterrows():
+        sku_id = str(row.get("sku_id", ""))
+        category = str(row.get("category", "unknown")).strip() or "unknown"
+        iso_week = int(row.get("iso_week", 0))
+        cutoff = _cutoff_for_sku(sku_id)
+
+        stats_key = (category, cutoff)
+        if stats_key not in category_stats_cache:
+            category_history = _before_cutoff(
+                history[history["_category_key"] == category], cutoff
+            )
+            seasonal_values = (
+                category_history.groupby("iso_week")["units_sold"].mean().to_dict()
+                if not category_history.empty
+                else {}
+            )
+            category_mean = (
+                float(category_history["units_sold"].mean())
+                if not category_history.empty and category_history["units_sold"].notna().any()
+                else np.nan
+            )
+            category_stats_cache[stats_key] = (seasonal_values, category_mean)
+
+        seasonal_values, category_mean = category_stats_cache[stats_key]
+        seasonal_value = float(seasonal_values.get(iso_week, np.nan))
+
+        if (not np.isfinite(seasonal_value)) or seasonal_value < 0:
+            trailing = category_mean
+            if (not np.isfinite(trailing)) or trailing < 0:
+                sku_key = (sku_id, cutoff)
+                if sku_key not in sku_trailing_cache:
+                    sku_history = _before_cutoff(
+                        history[history["_sku_key"] == sku_id], cutoff
+                    )
+                    sku_trailing_cache[sku_key] = (
+                        float(sku_history["units_sold"].mean())
+                        if not sku_history.empty and sku_history["units_sold"].notna().any()
+                        else np.nan
+                    )
+                trailing = sku_trailing_cache[sku_key]
+            if (not np.isfinite(trailing)) or trailing < 0:
+                trailing = 0.0
+            seasonal_value = trailing
+
+        if not np.isfinite(seasonal_value):
+            seasonal_value = 0.0
+        values.append(max(0.0, float(seasonal_value)))
+
+    result = pd.Series(values, index=target_index, dtype="float64")
+    result = result.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    return result.clip(lower=0.0)
 # --------------------------------------------------------------------------- #
 # 9. ROLLING-ORIGIN BACKTEST
 # --------------------------------------------------------------------------- #
@@ -848,25 +1076,26 @@ def rolling_origin_backtest(
         )
 
         # ---- Seasonal-naive on this exact window --------------------------
-        base_rows: List[Dict[str, Any]] = []
-        for sku in sorted(actual_test["sku_id"].unique()):
-            g_sku = (
-                features[features["sku_id"] == sku]
-                .sort_values(["iso_year", "iso_week"])
-                .reset_index(drop=True)
-            )
-            pos_in_test = g_sku.index[g_sku["period"].isin(set(test_periods["period"]))]
-            for p in pos_in_test:
-                src = p - config.seasonal_period
-                if src >= 0:
-                    base_rows.append(
-                        {
-                            "sku_id": sku,
-                            "period": g_sku.loc[p, "period"],
-                            "actual": float(g_sku.loc[p, "units_sold"]),
-                            "baseline_units": float(g_sku.loc[src, "units_sold"]),
-                        }
-                    )
+        ordered_features = features.sort_values(
+            ["sku_id", "iso_year", "iso_week"]
+        ).copy()
+        ordered_features["_seasonal_baseline_units"] = ordered_features.groupby(
+            "sku_id", sort=False
+        )["units_sold"].shift(config.seasonal_period)
+        baseline_rows = ordered_features.loc[
+            ordered_features["period"].isin(set(test_periods["period"]))
+            & ordered_features["_seasonal_baseline_units"].notna(),
+            ["sku_id", "period", "units_sold", "_seasonal_baseline_units"],
+        ]
+        base_rows = [
+            {
+                "sku_id": row[0],
+                "period": row[1],
+                "actual": float(row[2]),
+                "baseline_units": float(row[3]),
+            }
+            for row in baseline_rows.itertuples(index=False, name=None)
+        ]
         if base_rows:
             base_df = pd.DataFrame(base_rows)
             baseline_actual_all.extend(base_df["actual"].tolist())
@@ -884,13 +1113,25 @@ def rolling_origin_backtest(
             )
 
         # ---- ML model on the SAME window ---------------------------------
-        model_preds = _fit_predict_model(
+        model_preds = _recursive_backtest_predictions(
             features=features,
             train_mask=train_mask,
-            test_index=actual_test.index,
-            target_col="units_sold",
+            test_periods=test_periods,
             config=config,
         )
+        train_counts = features.loc[train_mask].groupby("sku_id")["period"].nunique()
+        low_history_skus = set(
+            train_counts[train_counts < max(config.min_train_weeks, config.min_obs_per_sku)].index
+        )
+        low_history_test = actual_test[actual_test["sku_id"].isin(low_history_skus)]
+        if len(low_history_test):
+            category_preds = _category_fallback_predictions(
+                features, train_mask, low_history_test
+            )
+            if model_preds is None:
+                model_preds = pd.Series(dtype="float64")
+            model_preds = model_preds.copy()
+            model_preds.loc[category_preds.index] = category_preds
         if model_preds is None:
             skipped_windows.append(
                 {
@@ -901,12 +1142,16 @@ def rolling_origin_backtest(
             )
         else:
             model_actual_all.extend(actual_test["units_sold"].astype(float).tolist())
-            model_pred_all.extend([float(p) for p in model_preds])
+            model_pred_all.extend(
+                [float(model_preds.get(index, np.nan)) for index in actual_test.index]
+            )
 
         fold_records.append(
             {
                 "fold": fold,
+                "train_start_period": str(train_periods["period"].iloc[0]),
                 "train_end_period": train_end_period,
+                "test_period": str(test_periods["period"].iloc[0]),
                 "test_start_period": str(test_periods["period"].iloc[0]),
                 "test_end_period": str(test_periods["period"].iloc[-1]),
                 "train_weeks": int(test_start_idx),
@@ -1066,6 +1311,8 @@ def forecast_weekly_sku(
     config: ForecastConfig = DEFAULT_CONFIG,
     processed_dir: Path = DATA_PROCESSED,
     forecast_run_id: Optional[str] = None,
+    weekly: Optional[pd.DataFrame] = None,
+    features: Optional[pd.DataFrame] = None,
 ) -> Dict[str, Any]:
     """Forecast the next ``horizon_weeks`` of weekly demand for ONE SKU.
 
@@ -1073,6 +1320,11 @@ def forecast_weekly_sku(
     raises ``MissingOfficialInputsError`` if they are absent. Never fabricates
     values; SKUs without sufficient model history are routed through the
     documented low-history fallback (see ``ForecastConfig``).
+
+    Batch callers (e.g. the D3 report runner) may pass ``weekly`` and
+    ``features`` to reuse objects already computed for the backtest;
+    when omitted they are computed exactly as before, so standalone
+    behaviour is unchanged.
 
     Returns a structured result with forecast rows:
         period, sku_id, forecast_units, model_name, low_confidence, note
@@ -1082,7 +1334,8 @@ def forecast_weekly_sku(
     if tables is None:
         tables = load_d1_outputs(processed_dir)
 
-    weekly = prepare_weekly_demand(tables, config)
+    if weekly is None:
+        weekly = prepare_weekly_demand(tables, config)
     history = check_sku_history(weekly, sku_id, config)
     if history["observed_weeks"] == 0:
         raise D3Error(
@@ -1112,15 +1365,42 @@ def forecast_weekly_sku(
 
     if use_model:
         # ---- ML path (iterative multi-step; predictions feed later lags) ----
-        features = build_forecast_features(weekly)
+        if features is None:
+            features = build_forecast_features(weekly)
         f_sku = (
             features[features["sku_id"] == sku_id]
             .sort_values(["iso_year", "iso_week"])
             .reset_index(drop=True)
         )
         feature_cols = [c for c in _FEATURE_COLUMNS if c in features.columns]
-        model = build_model(config)
         X = _encode_categoricals(f_sku, feature_cols)[feature_cols]
+
+        # Minimal compatibility fix for the official-derived dataset:
+        # HistGradientBoostingRegressor's binning raises
+        # "window shape cannot be larger than input array shape" when a feature
+        # column in THIS SKU's training slice carries no usable variation
+        # (all-NaN, or a single constant value). On the official data this
+        # happens for lag_13_week (short-history SKUs), the per-SKU columns
+        # category / subcategory / list_price (one value per SKU), and the
+        # constant calendar column is_holiday. Drop such columns so the model
+        # can fit with the remaining usable features; the SAME reduced column
+        # set is reused for prediction. No target/model/hyperparameter/horizon
+        # change; if no usable columns remain, the documented seasonal-naive
+        # fallback below is used instead of inventing values.
+        usable_cols = [
+            c for c in feature_cols
+            if X[c].notna().any() and X[c].nunique(dropna=True) >= 2
+        ]
+        if not usable_cols:
+            # No usable ML signal for this SKU -> routed to the documented
+            # seasonal-naive fallback (handled below, same as low-history SKUs).
+            use_model = False
+        else:
+            feature_cols = usable_cols
+            X = X[feature_cols]
+
+    if use_model:
+        model = build_model(config)
         try:
             model.fit(X, f_sku["units_sold"].astype("float64"))
         except Exception as exc:  # noqa: BLE001 - surface a clear D3 error
@@ -1172,22 +1452,27 @@ def forecast_weekly_sku(
         model_name = "hist_gradient_boosting"
         low_confidence = bool(history["low_history"])
 
-    elif config.low_history_fallback == "seasonal_naive":
-        # ---- Documented low-history fallback --------------------------------
-        base = seasonal_naive_baseline(weekly, horizon, config.seasonal_period)
-        base = base[base["sku_id"] == sku_id].reset_index(drop=True)
-        preds = [
-            None if (not bool(r["evaluable"])) else float(max(0.0, r["baseline_units"]))
-            for _, r in base.iterrows()
-        ]
-        model_name = "seasonal_naive"
+    elif config.low_history_fallback == "category_historical":
+        target = pd.DataFrame(
+            {
+                "sku_id": sku_id,
+                "category": meta_row.get("category", "unknown"),
+                "iso_week": [fw for _, fw in future_periods],
+            }
+        )
+        fallback = _category_fallback_predictions(
+            weekly,
+            weekly["sku_id"] == sku_id,
+            target,
+        )
+        preds = [float(value) for value in fallback]
+        model_name = "category_historical_fallback"
         fallback_used = True
         low_confidence = True
         note = (
             f"Low official history for this SKU ({history['observed_weeks']} "
             f"weeks < required {history['required_for_model']}); used the "
-            f"documented seasonal-naive fallback at period="
-            f"{config.seasonal_period}."
+            "category-level historical demand fallback."
         )
     else:
         raise InsufficientHistoryError(
@@ -1223,6 +1508,176 @@ def forecast_weekly_sku(
         "forecast_rows": rows,
         "history_summary": history,
     }
+
+
+def forecast_all_skus(
+    weekly: pd.DataFrame,
+    features: pd.DataFrame,
+    config: ForecastConfig = DEFAULT_CONFIG,
+    forecast_run_id: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Forecast all SKUs with one shared model fit for eligible histories."""
+    config.validate()
+    required = {"sku_id", "period", "iso_year", "iso_week", "units_sold"}
+    missing = required - set(weekly.columns)
+    if missing:
+        raise D3Error(f"forecast_all_skus(): weekly table missing {sorted(missing)}.")
+
+    normalized_weekly = weekly.copy()
+    normalized_weekly["sku_id"] = normalized_weekly["sku_id"].astype(str)
+    normalized_features = features.copy()
+    normalized_features["sku_id"] = normalized_features["sku_id"].astype(str)
+    feature_cols = [c for c in _FEATURE_COLUMNS if c in normalized_features.columns]
+    mappings = _category_mappings(normalized_features, feature_cols)
+    encoded_features = _encode_categoricals(normalized_features, feature_cols, mappings)
+
+    counts = normalized_weekly.groupby("sku_id")["period"].nunique()
+    min_history = max(config.min_train_weeks, config.min_obs_per_sku)
+    eligible_skus = set(counts[counts >= min_history].index)
+    model = None
+    if eligible_skus:
+        train_mask = normalized_features["sku_id"].isin(eligible_skus)
+        train_features = encoded_features.loc[train_mask, feature_cols]
+        feature_cols = [
+            column for column in feature_cols
+            if train_features[column].notna().any()
+            and train_features[column].nunique(dropna=True) >= 2
+        ]
+        if not feature_cols:
+            eligible_skus = set()
+        else:
+            train_features = encoded_features.loc[train_mask, feature_cols]
+        model = build_model(config)
+        if feature_cols:
+            model.fit(
+                train_features,
+                normalized_features.loc[train_mask, "units_sold"].astype("float64"),
+            )
+
+    baseline = None
+    if config.low_history_fallback == "category_historical":
+        baseline = seasonal_naive_baseline(
+            normalized_weekly, config.horizon_weeks, config.seasonal_period
+        )
+    run_id = forecast_run_id or datetime.utcnow().strftime("fc_%Y%m%dT%H%M%SZ")
+    results: List[Dict[str, Any]] = []
+# One-pass O(1) group lookups per SKU (avoid repeated full-frame filtering
+    # and per-SKU sorts for every SKU in the forecasting loop).
+    sku_by: Dict[str, pd.DataFrame] = {
+        str(sku): grp.sort_values(["iso_year", "iso_week"]).reset_index(drop=True)
+        for sku, grp in normalized_weekly.groupby("sku_id", sort=False)
+    }
+    feat_by: Dict[str, pd.DataFrame] = {
+        str(sku): grp.sort_values(["iso_year", "iso_week"]).reset_index(drop=True)
+        for sku, grp in normalized_features.groupby("sku_id", sort=False)
+    }
+
+    for sku_id in sorted(normalized_weekly["sku_id"].unique()):
+        sku_weekly = sku_by[sku_id]
+        history = check_sku_history(sku_weekly, sku_id, config)
+        max_year = int(sku_weekly["iso_year"].max())
+        max_week = int(sku_weekly.loc[sku_weekly["iso_year"] == max_year, "iso_week"].max())
+        future_periods = _next_periods(max_year, max_week, config.horizon_weeks)
+        meta_row = sku_weekly.iloc[0]
+        preds: List[Optional[float]] = []
+        fallback_used = False
+        low_confidence = False
+        note = ""
+
+        if model is not None and sku_id in eligible_skus:
+            sku_features = feat_by[sku_id]
+            work = sku_features.copy()
+            history_values = work["units_sold"].astype(float).tolist()
+            for fy, fw in future_periods:
+                last = work.iloc[-1]
+                row = {
+                    "lag_1_week": float(history_values[-1]) if history_values else np.nan,
+                    "lag_2_week": float(history_values[-2]) if len(history_values) >= 2 else np.nan,
+                    "lag_4_week": float(history_values[-4]) if len(history_values) >= 4 else np.nan,
+                    "lag_8_week": float(history_values[-8]) if len(history_values) >= 8 else np.nan,
+                    "lag_13_week": float(history_values[-13]) if len(history_values) >= 13 else np.nan,
+                    "rolling_mean_4": float(np.mean(history_values[-4:])) if history_values else np.nan,
+                    "rolling_mean_8": float(np.mean(history_values[-8:])) if history_values else np.nan,
+                    "rolling_std_4": float(np.std(history_values[-4:])) if len(history_values) >= 2 else np.nan,
+                    "rolling_std_8": float(np.std(history_values[-8:])) if len(history_values) >= 2 else np.nan,
+                    "week_of_year": float(fw),
+                    "month": last.get("month", 0),
+                    "season": last.get("season", "unknown"),
+                    "is_holiday": 0,
+                    "promo": 0,
+                    "promo_event": "none",
+                    "category": last.get("category", "unknown"),
+                    "subcategory": last.get("subcategory", "unknown"),
+                    "list_price": last.get("list_price", 0.0),
+                }
+                encoded_row = _encode_categoricals(
+                    pd.DataFrame([row]), feature_cols, mappings
+                )
+                prediction = max(0.0, float(model.predict(encoded_row[feature_cols])[0]))
+                preds.append(prediction)
+                history_values.append(prediction)
+                new_row = {column: np.nan for column in work.columns}
+                new_row.update({
+                    "sku_id": sku_id,
+                    "period": f"{fy}-W{fw:02d}",
+                    "iso_year": fy,
+                    "iso_week": fw,
+                    "units_sold": prediction,
+                    **row,
+                })
+                work = pd.concat([work, pd.DataFrame([new_row])], ignore_index=True)
+            model_name = "hist_gradient_boosting"
+            low_confidence = bool(history["low_history"])
+        elif config.low_history_fallback == "category_historical":
+            target = pd.DataFrame(
+                {
+                    "sku_id": sku_id,
+                    "category": meta_row.get("category", "unknown"),
+                    "iso_week": [fw for _, fw in future_periods],
+                }
+            )
+            fallback = _category_fallback_predictions(
+                sku_weekly,
+                None,
+                target,
+            )
+            preds = [float(value) for value in fallback]
+            model_name = "category_historical_fallback"
+            fallback_used = True
+            low_confidence = True
+            note = (
+                f"Low official history for this SKU ({history['observed_weeks']} weeks < "
+                f"required {history['required_for_model']}); used category-level "
+                "historical demand fallback."
+            )
+        else:
+            raise InsufficientHistoryError(f"SKU '{sku_id}' lacks sufficient history.")
+
+        results.append({
+            "forecast_run_id": run_id,
+            "sku_id": sku_id,
+            "horizon_weeks": config.horizon_weeks,
+            "model_name": model_name,
+            "fallback_used": fallback_used,
+            "low_history_flagged": low_confidence,
+            "category": meta_row.get("category"),
+            "subcategory": meta_row.get("subcategory"),
+            "forecast_rows": [
+                {
+                    "period": f"{fy}-W{fw:02d}",
+                    "iso_year": fy,
+                    "iso_week": fw,
+                    "sku_id": sku_id,
+                    "forecast_units": value,
+                    "model_name": model_name,
+                    "low_confidence": low_confidence,
+                    "note": note,
+                }
+                for (fy, fw), value in zip(future_periods, preds)
+            ],
+            "history_summary": history,
+        })
+    return results
 # --------------------------------------------------------------------------- #
 # 12. FORECAST REPORT
 # --------------------------------------------------------------------------- #

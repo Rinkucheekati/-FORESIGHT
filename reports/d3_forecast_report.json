@@ -10,62 +10,70 @@
   },
   "baseline_used": "seasonal_naive",
   "bias": {
-    "baseline": -0.8208333333333333,
-    "model": -1.1622663012296408,
+    "baseline": -0.12236286919831224,
+    "model": 0.10146245877967443,
     "secondary_metric": true,
     "sign_convention": "positive = over-forecast, negative = under-forecast"
   },
+  "data_source_statement": "Data source: the official retail dataset provided for Project FORESIGHT, reduced deterministically to 25,000 transactions (seed 42) and processed through the official D1 pipeline. D3 used the complete official D1 cleaned sales output without an additional row or SKU reduction. No transaction values were fabricated or manually altered.",
   "data_sufficiency_status": "ready",
   "folds": [
     {
-      "baseline_evaluable_rows": 240,
+      "baseline_evaluable_rows": 82,
       "fold": 1,
       "model_evaluable": true,
-      "n_test_rows": 240,
-      "n_train_rows": 1680,
-      "test_end_period": "2025-W12",
-      "test_start_period": "2025-W05",
-      "train_end_period": "2025-W04",
-      "train_weeks": 56
+      "n_test_rows": 941,
+      "n_train_rows": 19395,
+      "test_end_period": "2025-W37",
+      "test_period": "2025-W30",
+      "test_start_period": "2025-W30",
+      "train_end_period": "2025-W29",
+      "train_start_period": "2021-W52",
+      "train_weeks": 186
     },
     {
-      "baseline_evaluable_rows": 240,
+      "baseline_evaluable_rows": 70,
       "fold": 2,
       "model_evaluable": true,
-      "n_test_rows": 240,
-      "n_train_rows": 1920,
-      "test_end_period": "2025-W20",
-      "test_start_period": "2025-W13",
-      "train_end_period": "2025-W12",
-      "train_weeks": 64
+      "n_test_rows": 974,
+      "n_train_rows": 20336,
+      "test_end_period": "2025-W45",
+      "test_period": "2025-W38",
+      "test_start_period": "2025-W38",
+      "train_end_period": "2025-W37",
+      "train_start_period": "2021-W52",
+      "train_weeks": 194
     },
     {
-      "baseline_evaluable_rows": 240,
+      "baseline_evaluable_rows": 85,
       "fold": 3,
       "model_evaluable": true,
-      "n_test_rows": 240,
-      "n_train_rows": 2160,
-      "test_end_period": "2025-W28",
-      "test_start_period": "2025-W21",
-      "train_end_period": "2025-W20",
-      "train_weeks": 72
+      "n_test_rows": 1047,
+      "n_train_rows": 21310,
+      "test_end_period": "2026-W01",
+      "test_period": "2025-W46",
+      "test_start_period": "2025-W46",
+      "train_end_period": "2025-W45",
+      "train_start_period": "2021-W52",
+      "train_weeks": 202
     }
   ],
   "forecast_grain": "sku_id x week (official weekly grain)",
   "forecast_horizon_weeks": 8,
-  "generated_at_utc": "2026-08-24T17:29:25.959724Z",
+  "generated_at_utc": "2026-08-29T15:31:58.831318Z",
   "limitations": [
+    "4301 SKU(s) have less than 12 weeks of official history; they are routed through the 'category_historical' fallback and flagged low-confidence.",
     "Promotion features describe calendar/promo context; observed correlations are not causal claims."
   ],
-  "low_history_sku_count": 0,
+  "low_history_sku_count": 4301,
   "mape": {
-    "baseline": 0.3714437401806794,
-    "model": 0.7272770436291814,
+    "baseline": 0.7602021639576141,
+    "model": 0.6671339917184845,
     "secondary_metric_only": true
   },
   "model_used": "hist_gradient_boosting",
   "model_vs_baseline": {
-    "improvement_vs_baseline_wape": 0.20201206440752037,
+    "improvement_vs_baseline_wape": 0.2077064790185007,
     "same_evaluation_windows": true
   },
   "output_files": {
@@ -76,15 +84,14 @@
   "report": "D3 demand forecasting",
   "seasonal_period_weeks": 52,
   "selected_model": "hist_gradient_boosting",
-  "selection_reason": "ML WAPE (0.1934) < baseline WAPE (0.2424) on identical rolling-origin folds.",
+  "selection_reason": "ML WAPE (0.5062) < baseline WAPE (0.6389) on identical rolling-origin folds.",
   "selection_rule": "select ML only if model WAPE < baseline WAPE on the same folds",
   "skipped_windows": [],
-  "synthetic_data_disclaimer": "Synthetic development data only. These forecasts, WAPE, bias, model selection, and comparisons are not official Zidio or NorthBay Living results.",
-  "total_skus": 30,
-  "total_weeks_observed": 80,
+  "total_skus": 4616,
+  "total_weeks_observed": 210,
   "wape": {
-    "baseline": 0.2423955282451808,
-    "model": 0.1934287071812204,
+    "baseline": 0.6388888888888888,
+    "model": 0.5061875272937356,
     "primary_metric": true
   }
 }

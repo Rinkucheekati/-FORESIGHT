@@ -1,13 +1,14 @@
-"""Run the D3 weekly forecasting workflow on synthetic development data.
+"""Run the D3 weekly forecasting workflow on the official D1 outputs.
 
-Forecasts and metrics are computed by ``src.forecast`` from D1 outputs. This
-runner does not fabricate metrics and does not represent official results.
+Forecasts and metrics are computed by ``src.forecast`` from the official D1
+analysis-ready outputs. This runner does not fabricate or manually alter data.
 """
 
 from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -63,13 +64,18 @@ def main() -> None:
         low_history_sku_count=readiness["details"]["skus_low_history"],
     )
 
-    forecast_rows = []
-    for sku_id in sorted(weekly["sku_id"].astype(str).unique()):
-        result = forecast.forecast_weekly_sku(
-            sku_id, tables, config, PROCESSED_DIR,
-            forecast_run_id="fc_synthetic_dev_20260824",
-        )
-        forecast_rows.extend(result["forecast_rows"])
+    start_time = time.time()
+    print("[D3] Starting shared-model forecast for official SKUs...", file=sys.stderr)
+    sku_results = forecast.forecast_all_skus(
+        weekly=weekly,
+        features=features,
+        config=config,
+        forecast_run_id="fc_official_d3_20260827",
+    )
+    forecast_rows = [
+        row for result in sku_results for row in result["forecast_rows"]
+    ]
+    total_skus = len(sku_results)
     forecast_frame = pd.DataFrame(forecast_rows)
     forecast_frame.to_csv(FORECAST_PATH, index=False)
     pd.DataFrame(backtest["folds"]).to_csv(BACKTEST_PATH, index=False)
@@ -78,9 +84,12 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    report["synthetic_data_disclaimer"] = (
-        "Synthetic development data only. These forecasts, WAPE, bias, model "
-        "selection, and comparisons are not official Zidio or NorthBay Living results."
+    report["data_source_statement"] = (
+        "Data source: the official retail dataset provided for Project "
+        "FORESIGHT, reduced deterministically to 25,000 transactions (seed 42) "
+        "and processed through the official D1 pipeline. D3 used the complete "
+        "official D1 cleaned sales output without an additional row or SKU "
+        "reduction. No transaction values were fabricated or manually altered."
     )
     report["output_files"] = {
         "forecast_results": str(FORECAST_PATH.relative_to(REPO_ROOT)),
@@ -90,6 +99,13 @@ def main() -> None:
     REPORT_PATH.write_text(
         json.dumps(_jsonable(report), indent=2, sort_keys=True),
         encoding="utf-8",
+    )
+    
+    total_elapsed = time.time() - start_time
+    print(
+        f"[D3] ✅ Forecast complete! {total_skus} SKUs in {total_elapsed:.0f}s "
+        f"({total_elapsed/total_skus:.2f}s per SKU)",
+        file=sys.stderr
     )
     print(
         f"D3_OK skus={forecast_frame['sku_id'].nunique()} "

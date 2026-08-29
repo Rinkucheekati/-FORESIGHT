@@ -4,7 +4,7 @@ This repository includes a Render Blueprint in `render.yaml` for the Streamlit d
 
 ## Before deployment
 
-The checked-in processed D1-D4 artifacts are generated from synthetic development data. The dashboard and API must continue to display and document that limitation. These values are not official Zidio or NorthBay Living results.
+The checked-in processed D1–D4 artifacts are generated from the official retail dataset provided for Project FORESIGHT (deterministic 25,000-transaction selection, seed 42), processed through the official D1 pipeline. Forecasts, risk scores, decisions, and rupee values are model-derived planning outputs computed from that official data — they are not official Zidio or NorthBay Living business results. The dashboard and API must continue to display and document that distinction.
 
 ## Render deployment
 

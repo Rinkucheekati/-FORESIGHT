@@ -1,4 +1,4 @@
-fold,train_end_period,test_start_period,test_end_period,train_weeks,n_train_rows,n_test_rows,baseline_evaluable_rows,model_evaluable
-1,2025-W04,2025-W05,2025-W12,56,1680,240,240,True
-2,2025-W12,2025-W13,2025-W20,64,1920,240,240,True
-3,2025-W20,2025-W21,2025-W28,72,2160,240,240,True
+fold,train_start_period,train_end_period,test_period,test_start_period,test_end_period,train_weeks,n_train_rows,n_test_rows,baseline_evaluable_rows,model_evaluable
+1,2021-W52,2025-W29,2025-W30,2025-W30,2025-W37,186,19395,941,82,True
+2,2021-W52,2025-W37,2025-W38,2025-W38,2025-W45,194,20336,974,70,True
+3,2021-W52,2025-W45,2025-W46,2025-W46,2026-W01,202,21310,1047,85,True

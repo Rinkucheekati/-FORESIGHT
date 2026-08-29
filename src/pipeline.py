@@ -55,6 +55,33 @@ import pandas as pd
 
 from src.paths import DATA_PROCESSED, DATA_RAW, OFFICIAL_RAW_FILES, OFFICIAL_SCHEMAS
 
+OFFICIAL_SELECTED_DIR = DATA_RAW / "official_selected"
+OFFICIAL_SELECTED_FILE = OFFICIAL_SELECTED_DIR / "sales_transactions_25000.csv"
+OFFICIAL_RETAIL_DIR = DATA_RAW / "retail_contaminated_dataset"
+
+# Official season definition shared with src/retail_adapter.py::_season.
+# Season is a pure deterministic function of the calendar month — no data
+# invention (12,1,2 Winter; 3,4,5 Spring; 6,7,8 Summer; 9,10,11 Autumn).
+SEASON_BY_MONTH = {
+    12: "Winter", 1: "Winter", 2: "Winter",
+    3: "Spring", 4: "Spring", 5: "Spring",
+    6: "Summer", 7: "Summer", 8: "Summer",
+    9: "Autumn", 10: "Autumn", 11: "Autumn",
+}
+SELECTED_TRANSACTION_COLUMNS = (
+    "date", "receipt_id", "store_id", "sku_id", "customer_id",
+    "quantity", "unit_price", "total_value", "channel", "discount_pct",
+    "promo_id",
+)
+RETAIL_SUPPORTING_FILES = {
+    "sku_master": "sku_master.csv",
+    "customer_master": "customer_master.csv",
+    "store_master": "store_master.csv",
+    "promotions": "promotions.csv",
+    "inventory_source": "inventory_snapshot.csv",
+    "flags": "sku_inventory_flags.csv",
+}
+
 # --------------------------------------------------------------------------- #
 # Logging / exception types
 # --------------------------------------------------------------------------- #
@@ -198,6 +225,101 @@ class PipelineReport:
 # --------------------------------------------------------------------------- #
 
 
+def _ingest_selected_retail_inputs(raw_dir: Path) -> dict:
+    """Load selected official transactions and the official retail dimensions."""
+    selected_file = Path(raw_dir) / "official_selected" / "sales_transactions_25000.csv"
+    retail_dir = Path(raw_dir) / "retail_contaminated_dataset"
+    required = [selected_file] + [retail_dir / name for name in RETAIL_SUPPORTING_FILES.values()]
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise MissingOfficialInputsError(
+            "Official FORESIGHT inputs are missing (selected sales_daily boundary, sku_master, "
+            "calendar, inventory_snapshots, and retail dimensions): " + ", ".join(missing)
+        )
+
+    transactions = pd.read_csv(selected_file)
+    if tuple(transactions.columns) != SELECTED_TRANSACTION_COLUMNS or len(transactions) != 25_000:
+        raise SchemaValidationError(
+            "The selected transaction input must contain the exact official columns and 25000 rows."
+        )
+    sku_source = pd.read_csv(retail_dir / RETAIL_SUPPORTING_FILES["sku_master"])
+    customers = pd.read_csv(retail_dir / RETAIL_SUPPORTING_FILES["customer_master"])
+    stores = pd.read_csv(retail_dir / RETAIL_SUPPORTING_FILES["store_master"])
+    promotions = pd.read_csv(retail_dir / RETAIL_SUPPORTING_FILES["promotions"])
+    inventory_source = pd.read_csv(retail_dir / RETAIL_SUPPORTING_FILES["inventory_source"])
+    flags = pd.read_csv(retail_dir / RETAIL_SUPPORTING_FILES["flags"])
+
+    dates = pd.to_datetime(transactions["date"], errors="coerce")
+    quantity = pd.to_numeric(transactions["quantity"], errors="coerce")
+    revenue = pd.to_numeric(transactions["total_value"], errors="coerce")
+    unit_price = pd.to_numeric(transactions["unit_price"], errors="coerce")
+    valid = dates.notna() & transactions["sku_id"].notna() & quantity.notna()
+    sales = pd.DataFrame({
+        "date": dates,
+        "sku_id": transactions["sku_id"].astype("string").str.strip(),
+        "units_sold": quantity,
+        "revenue": revenue,
+        "price_x_units": unit_price * quantity,
+        "promo_flag": transactions["promo_id"].astype("string").str.strip().ne(""),
+    }).loc[valid]
+    sales = sales.groupby(["date", "sku_id"], as_index=False).agg(
+        units_sold=("units_sold", "sum"), revenue=("revenue", "sum"),
+        price_x_units=("price_x_units", "sum"), promo_flag=("promo_flag", "max"),
+    )
+    sales["unit_price"] = sales["price_x_units"] / sales["units_sold"]
+    sales = sales[["date", "sku_id", "units_sold", "revenue", "unit_price", "promo_flag"]]
+
+    sku = sku_source[["sku_id", "category", "subcategory", "unit_price", "cost_price"]].copy()
+    sku["sku_id"] = sku["sku_id"].astype(str)
+    sku["launch_date"] = sku["sku_id"].map(sales.groupby("sku_id")["date"].min())
+    sku = sku.rename(columns={"cost_price": "unit_cost", "unit_price": "list_price"})
+    sku = sku[["sku_id", "category", "subcategory", "launch_date", "unit_cost", "list_price"]]
+
+    calendar = pd.DataFrame({"date": pd.date_range(sales["date"].min(), sales["date"].max(), freq="D")})
+    calendar["week"] = calendar["date"].dt.isocalendar().week.astype(int)
+    calendar["month"] = calendar["date"].dt.month
+    # Season derived deterministically from month via SEASON_BY_MONTH (the
+    # project-wide definition shared with src/retail_adapter.py::_season).
+    calendar["season"] = calendar["month"].map(SEASON_BY_MONTH)
+    calendar["is_holiday"] = pd.NA
+    calendar["promo_event"] = pd.NA
+    for row in promotions.itertuples(index=False):
+        start = pd.to_datetime(getattr(row, "start_date", None), errors="coerce")
+        end = pd.to_datetime(getattr(row, "end_date", None), errors="coerce")
+        if pd.notna(start) and pd.notna(end):
+            mask = calendar["date"].between(start.normalize(), end.normalize())
+            calendar.loc[mask & calendar["promo_event"].isna(), "promo_event"] = str(getattr(row, "promo_name", ""))
+
+    inventory = inventory_source.copy()
+    inventory["sku_id"] = inventory["sku_id"].astype(str)
+    inventory = inventory.groupby("sku_id", as_index=False).agg(
+        on_hand_units=("stock_on_hand", "sum"), reorder_point=("reorder_point", "sum"),
+    )
+    inventory.insert(0, "date", sales["date"].max())
+    inventory["on_order_units"] = 0
+    inventory["lead_time_days"] = 14
+    inventory = inventory[["date", "sku_id", "on_hand_units", "on_order_units", "lead_time_days", "reorder_point"]]
+
+    return {
+        "sales_daily": sales,
+        "sku_master": sku,
+        "calendar": calendar,
+        "inventory_snapshots": inventory,
+        "_source_metadata": {
+            "selected_transaction_file": "data/raw/official_selected/sales_transactions_25000.csv",
+            "selected_transaction_rows": int(len(transactions)),
+            "selected_unique_skus": int(transactions["sku_id"].nunique()),
+            "selected_unique_stores": int(transactions["store_id"].nunique()),
+            "selected_unique_customers": int(transactions["customer_id"].nunique()),
+            "customer_master_rows": int(len(customers)),
+            "store_master_rows": int(len(stores)),
+            "promotion_rows": int(len(promotions)),
+            "ground_truth_flag_rows": int(len(flags)),
+            "fabricated_source_records": 0,
+        },
+    }
+
+
 def ingest_raw_extracts(raw_dir: Path = DATA_RAW) -> dict:
     """Read the four official raw extracts from ``raw_dir`` into a dict of DataFrames.
 
@@ -205,28 +327,7 @@ def ingest_raw_extracts(raw_dir: Path = DATA_RAW) -> dict:
     Mini-FORESIGHT CSVs in the same folder are never substituted. Raises
     ``MissingOfficialInputsError`` if one or more official files are absent.
     """
-    raw_dir = Path(raw_dir)
-    missing = [
-        name
-        for name, fname in OFFICIAL_RAW_FILES.items()
-        if not (raw_dir / fname).is_file()
-    ]
-    if missing:
-        raise MissingOfficialInputsError(
-            "Official FORESIGHT inputs are missing: "
-            + ", ".join(missing)
-            + f". Expected under: {raw_dir}. Refusing to run with legacy/sample "
-            "data. Place the official extracts there (this pipeline never "
-            "creates, downloads, or fabricates data)."
-        )
-
-    tables = {}
-    for name, filename in OFFICIAL_RAW_FILES.items():
-        try:
-            tables[name] = pd.read_csv(raw_dir / filename)
-        except Exception as exc:  # noqa: BLE001 - surface a clear D1 error
-            raise D1Error(f"Failed to read official extract '{filename}': {exc}") from exc
-    return tables
+    return _ingest_selected_retail_inputs(Path(raw_dir))
 
 
 # --------------------------------------------------------------------------- #
@@ -752,6 +853,7 @@ def _build_pipeline_report(
     validation: Dict[str, Any],
     decisions: List[CleaningDecision],
     cross_table: CrossTableReport,
+    source_metadata: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assemble the machine-readable D1 quality/cleaning report."""
     return {
@@ -771,6 +873,7 @@ def _build_pipeline_report(
             for d in decisions
         ],
         "cross_table": cross_table.to_serializable(),
+        "source_boundary": source_metadata or {},
         "policy_note": (
             "Missing values: business keys dropped deterministically; all "
             "other fields preserved and reported. No value was invented."
@@ -1015,7 +1118,9 @@ def run_pipeline(
     analysis_ready = build_analysis_ready(cleaned)
 
     # 7) Machine-readable report + deterministic output writing.
-    report_payload = _build_pipeline_report(validation, decisions, cross_table)
+    report_payload = _build_pipeline_report(
+        validation, decisions, cross_table, raw_tables.get("_source_metadata")
+    )
     written = write_outputs(analysis_ready, cleaned, report_payload, processed_dir)
 
     rows_written = {OUTPUT_FILES[k]: int(len(v)) for k, v in cleaned.items()}

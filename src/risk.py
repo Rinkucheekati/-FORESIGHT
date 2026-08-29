@@ -1192,8 +1192,13 @@ def create_risk_report(
     """
     base: Dict[str, Any] = {
         "project": "Project FORESIGHT — D4 Inventory Risk & Decision Engine",
+        "report": "D4 Inventory Risk & Decision report",
         "generated_at_utc": datetime.utcnow().isoformat() + "Z",
         "data_status": STATUS_DATA_NOT_AVAILABLE,
+        "status": STATUS_DATA_NOT_AVAILABLE,
+        "total_skus_scored": 0,
+        "total_rupee_value_at_stake": None,
+        "decision_distribution": {},
         "official_requirements": [
             "two-axis risk (stockout AND overstock)",
             "rupee value at stake",
@@ -1239,6 +1244,10 @@ def create_risk_report(
     base.update(
         {
             "data_status": STATUS_READY,
+            "status": STATUS_READY,
+            "total_skus_scored": len(rows),
+            "total_rupee_value_at_stake": _sum("rupee_value_at_stake"),
+            "decision_distribution": decision_counts,
             "inventory_summary": {
                 "skus_scored": len(rows),
                 "total_inventory_position_units": _sum("inventory_position"),

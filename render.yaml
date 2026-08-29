@@ -6,6 +6,9 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run app/app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
     healthCheckPath: /_stcore/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.15
 
   - type: web
     name: foresight-scoring-api
@@ -14,3 +17,6 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn service.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.15

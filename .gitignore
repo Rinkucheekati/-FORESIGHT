@@ -15,3 +15,25 @@ data/raw/
 *.pkl
 *.joblib
 service/.env
+
+# =============================================================================
+# Scratch / audit temporary files (housekeeping) — never project deliverables.
+# "_*" patterns are root-anchored (leading slash) so package files such as
+# src/__init__.py can never be matched. Official data lives under data/raw/
+# and processed outputs under data/processed/, neither at the repository root.
+# =============================================================================
+/_*.txt
+/_*.py
+/_*.md
+/_*.csv
+/_*.json
+gitstatus.txt
+*.log
+*.tmp
+*.bak
+*.orig
+~$*
+Thumbs.db
+Desktop.ini
+.DS_Store
+nul

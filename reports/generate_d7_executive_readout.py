@@ -28,7 +28,7 @@ PALE = RGBColor(239, 246, 245)
 MUTED = RGBColor(92, 108, 119)
 WHITE = RGBColor(255, 255, 255)
 
-DISCLAIMER = "SYNTHETIC DEVELOPMENT DATA | Not official Zidio or NorthBay Living results"
+DISCLAIMER = "FORESIGHT official-data readout (D1-D4) | Decision thresholds are assumptions for review"
 
 
 def load_json(path: Path) -> dict:
@@ -153,9 +153,9 @@ def main():
     add_metric(slide, "Markdown / clear", str(d4_counts.get("MARKDOWN_CLEAR", 0)), Inches(3.75), Inches(3.0), 2.8, RGBColor(255, 246, 235), ORANGE)
     add_metric(slide, "Healthy", str(d4_counts.get("HEALTHY", 0)), Inches(6.82), Inches(3.0), 2.8, PALE, TEAL)
     add_bullets(slide, [
-        "Protect availability for the 17 highest stockout-pressure SKUs.",
-        "Review markdown or clearance for 7 excess-cover SKUs.",
-        "Treat every figure as synthetic development evidence, not a company result.",
+        f"Protect availability: {d4_counts.get('REORDER_NOW', 0)} SKUs flagged reorder-now.",
+        f"Reduce excess: {d4_counts.get('MARKDOWN_CLEAR', 0)} SKUs at markdown/clear.",
+        "Figures are computed from official D1-D4 outputs; recommendations and thresholds are assumptions for review.",
     ], Inches(0.7), Inches(4.65), Inches(11.8), Inches(1.45), 16)
 
     # 2. What is at risk
@@ -211,7 +211,7 @@ def main():
     for idx, chart in enumerate(chart_paths):
         if chart.is_file():
             slide.shapes.add_picture(str(chart), Inches(6.85 + (idx % 2) * 2.95), Inches(1.65 + (idx // 2) * 2.5), width=Inches(2.7), height=Inches(2.15))
-    add_text(slide, "Charts are descriptive summaries of synthetic development data.", Inches(6.9), Inches(6.05), Inches(5.3), Inches(0.3), 10, MUTED)
+    add_text(slide, "Charts are descriptive D2 summaries of the official demand data.", Inches(6.9), Inches(6.05), Inches(5.3), Inches(0.3), 10, MUTED)
 
     # 5. Forecast performance
     slide = new_slide(prs)
@@ -242,23 +242,23 @@ def main():
     slide = new_slide(prs)
     add_header(slide, "Assumptions & Limitations", "What a decision-maker should know before interpreting the numbers")
     add_bullets(slide, [
-        "All inputs are synthetic development data generated for testing; none are official internship or NorthBay Living extracts.",
-        "D4 thresholds are implementation assumptions and must be reviewed with the mentor/client.",
+        "All forecasts and risk scores are computed from the official D1-D4 outputs; nothing is fabricated or sourced from legacy demo files.",
+        "D4 thresholds (coverage target, volatility cut-offs, decision matrix) are implementation assumptions and must be reviewed with the mentor/client.",
         "Rupee exposure uses official unit_cost on a cost basis; lost revenue and margin impact are not inferred.",
-        "Forecast performance is measured on this synthetic history and should be recomputed on official data.",
+        "Forecast performance is measured with chronological rolling-origin folds on the official 25,000-transaction history and should be revisited as data grows.",
         "Promotion and seasonal relationships are descriptive, not causal claims.",
         "The system recommends review priorities; it does not place orders or take actions automatically.",
     ], Inches(0.95), Inches(1.55), Inches(11.3), Inches(4.7), 18)
 
     # 8. Next steps
     slide = new_slide(prs)
-    add_header(slide, "Decision Summary & Next Steps", "A clean handoff from development evidence to official-data validation")
+    add_header(slide, "Decision Summary & Next Steps", "Prioritised actions with honest forecast accuracy and clear assumptions")
     add_text(slide, "Today", Inches(0.8), Inches(1.5), Inches(2), Inches(0.35), 18, TEAL, True)
-    add_bullets(slide, ["Use the prioritised queue to demonstrate the workflow.", "Review the D3 accuracy and D4 valuation assumptions.", "Keep synthetic findings clearly separated from company conclusions."], Inches(0.85), Inches(1.95), Inches(5.2), Inches(2.2), 16)
-    add_text(slide, "When official extracts arrive", Inches(7.0), Inches(1.5), Inches(4.5), Inches(0.35), 18, ORANGE, True)
-    add_bullets(slide, ["Replace the four raw CSVs without changing the contract.", "Rerun D1 through D4 and compare data sufficiency, WAPE, bias, and risk exposure.", "Validate recommendations with Operations, Finance, and the mentor before use."], Inches(7.05), Inches(1.95), Inches(5.25), Inches(2.5), 16)
+    add_bullets(slide, ["Use the prioritised queue to review decisions.", "Review the D3 accuracy and D4 valuation assumptions.", "Keep observed metrics distinct from recommendations and thresholds."], Inches(0.85), Inches(1.95), Inches(5.2), Inches(2.2), 16)
+    add_text(slide, "Before relying on outputs", Inches(7.0), Inches(1.5), Inches(4.5), Inches(0.35), 18, ORANGE, True)
+    add_bullets(slide, ["Revisit D3 WAPE/bias and D4 valuation as the official data grows.", "Compare updated data sufficiency and risk exposure across refreshes.", "Validate recommendations with Operations, Finance, and the mentor before use."], Inches(7.05), Inches(1.95), Inches(5.25), Inches(2.5), 16)
     add_box(slide, Inches(0.85), Inches(4.7), Inches(11.45), Inches(1.0), NAVY, True)
-    add_text(slide, "The development pipeline is ready for an honest, reproducible replacement with official data.", Inches(1.15), Inches(4.95), Inches(10.85), Inches(0.5), 20, WHITE, True, PP_ALIGN.CENTER)
+    add_text(slide, "The pipeline is complete on the official data and ready for ongoing review and refresh.", Inches(1.15), Inches(4.95), Inches(10.85), Inches(0.5), 20, WHITE, True, PP_ALIGN.CENTER)
 
     prs.core_properties.created = datetime(2020, 1, 1)
     prs.core_properties.modified = datetime(2020, 1, 1)

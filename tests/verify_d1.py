@@ -154,6 +154,46 @@ r = subprocess.run([sys.executable, "-m", "src.pipeline", "--help"],
                    cwd=str(REPO), capture_output=True, text=True)
 check("6b. CLI --help works", r.returncode == 0 and "--raw-dir" in r.stdout)
 
+# 8) official season derivation (D1 season defect fix) ------------------------
+SEASONS = {"Winter", "Spring", "Summer", "Autumn"}
+SEASON_BY_MONTH = {12: "Winter", 1: "Winter", 2: "Winter",
+                   3: "Spring", 4: "Spring", 5: "Spring",
+                   6: "Summer", 7: "Summer", 8: "Summer",
+                   9: "Autumn", 10: "Autumn", 11: "Autumn"}
+cal_path = DATA_PROCESSED / "calendar_clean.csv"
+ar_path = DATA_PROCESSED / "sales_analysis_ready.csv"
+if not cal_path.is_file() or not ar_path.is_file():
+    check("8. official season outputs exist", False,
+          "data/processed calendar_clean.csv / sales_analysis_ready.csv missing — run the D1 pipeline")
+else:
+    cal = pd.read_csv(cal_path)
+    ar = pd.read_csv(ar_path, usecols=lambda c: c in ("month", "season"))
+    if "season" in cal.columns and "month" in cal.columns and len(cal):
+        cal_season = cal["season"]
+        check("8a. calendar season complete & only the four official values",
+              bool(cal_season.notna().all()) and set(cal_season.unique()) <= SEASONS,
+              f"nulls={int(cal_season.isna().sum())}/{len(cal)} "
+              f"values={sorted(str(v) for v in cal_season.unique())}")
+        check("8b. calendar season == deterministic month mapping",
+              bool((cal["month"].map(SEASON_BY_MONTH) == cal_season).all()))
+        counts = cal_season.value_counts().to_dict()
+        print("Season distribution (calendar_clean.csv):",
+              {s: int(counts.get(s, 0)) for s in sorted(SEASONS)})
+    else:
+        check("8a. calendar season complete & only the four official values",
+              False, "season/month column missing or empty calendar")
+        check("8b. calendar season == deterministic month mapping", False)
+    if "season" in ar.columns and "month" in ar.columns and len(ar):
+        ar_season = ar["season"]
+        ar_ok = bool(ar_season.notna().all()) and set(ar_season.unique()) <= SEASONS \
+            and bool((ar["month"].map(SEASON_BY_MONTH) == ar_season).all())
+        check("8c. analysis-ready season propagated & month-consistent", ar_ok,
+              f"nulls={int(ar_season.isna().sum())}/{len(ar)} "
+              f"values={sorted(str(v) for v in ar_season.unique())}")
+    else:
+        check("8c. analysis-ready season propagated & month-consistent",
+              False, "season/month column missing or empty analysis-ready table")
+
 print()
 failed = [n for n, ok, _ in results if not ok]
 print(f"D1 VERIFICATION: {len(results) - len(failed)}/{len(results)} passed")

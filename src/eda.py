@@ -78,6 +78,7 @@ class MissingD1OutputsError(EDAError):
 # Official D1 output files consumed by D2 (exact names, written by src.pipeline).
 D1_OUTPUT_FILES = {
     "sales_daily": "sales_daily_clean.csv",
+    "analysis_ready": "sales_analysis_ready.csv",
     "sku_master": "sku_master_clean.csv",
     "calendar": "calendar_clean.csv",
     "inventory_snapshots": "inventory_snapshots_clean.csv",
@@ -218,7 +219,8 @@ def analyze_demand_patterns(tables: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
     subcategory demand, average demand, demand variability. No conclusion strings
     are hard-coded; D2 always derives them from the actual data values passed in.
     """
-    sales = tables["sales_daily"].copy() if "sales_daily" in tables else None
+    sales = tables.get("analysis_ready", tables.get("sales_daily"))
+    sales = sales.copy() if sales is not None else None
     if sales is None:
         raise EDAError("analyze_demand_patterns(): 'sales_daily' missing from loaded D1 tables.")
 
@@ -271,7 +273,7 @@ def analyze_seasonality(tables: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
     Computes per-period aggregates for: week, month, season, is_holiday,
     promo_event. Just a computation layer — no hard-coded seasonal findings.
     """
-    sales = tables.get("sales_daily")
+    sales = tables.get("analysis_ready", tables.get("sales_daily"))
     if sales is None:
         raise EDAError("analyze_seasonality(): 'sales_daily' not loaded")
     sales = sales.copy()
@@ -282,11 +284,13 @@ def analyze_seasonality(tables: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
         calendar_cols = [
             "date", "week", "month", "season", "is_holiday", "promo_event"
         ]
-        sales = sales.merge(
-            calendar[calendar_cols].drop_duplicates("date"),
-            on="date",
-            how="left",
-        )
+        missing_calendar_cols = [col for col in calendar_cols if col not in sales.columns]
+        if missing_calendar_cols:
+            sales = sales.merge(
+                calendar[["date"] + missing_calendar_cols].drop_duplicates("date"),
+                on="date",
+                how="left",
+            )
 
     result: Dict[str, Any] = {}
 
@@ -319,7 +323,7 @@ def analyze_trend(tables: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
     time index, total units per date, rolling means, linear-fit slope/error
     (``scipy.stats.linregress`` equivalent implemented with pandas/numpy only).
     """
-    sales = tables["sales_daily"]
+    sales = tables.get("analysis_ready", tables["sales_daily"]).copy()
     sales["date"] = pd.to_datetime(sales["date"], errors="coerce")
     daily = sales.groupby("date")["units_sold"].sum().sort_index()
 
@@ -360,7 +364,7 @@ def top_movers(tables: Dict[str, pd.DataFrame], top_n: int = 10) -> Dict[str, An
 
         movers = total_units / avg_daily_units (per SKU, over the loaded window)
     """
-    sales = tables.get("sales_daily")
+    sales = tables.get("analysis_ready", tables.get("sales_daily"))
     if sales is None:
         raise EDAError("top_movers(): 'sales_daily' missing from D1 tables")
 
@@ -467,7 +471,7 @@ def analyze_drivers(tables: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
     This is computation only — no causal language, no invented drivers.
     Correlation matrix, and grouped-by weekly/daily means when useful, are returned.
     """
-    sales = tables.get("sales_daily")
+    sales = tables.get("analysis_ready", tables.get("sales_daily"))
     if sales is None:
         raise EDAError("analyze_drivers(): 'sales_daily' missing from D1 tables")
 
@@ -531,6 +535,10 @@ def generate_business_insights(
     top = movers["movers"][0]
     top_share = float(top["share_of_total"])
     season_values = seasonality.get("season", {}).get("sales_by_period", {})
+    period_label = "season"
+    if not season_values:
+        season_values = seasonality.get("month", {}).get("sales_by_period", {})
+        period_label = "month"
     peak_season = max(season_values, key=season_values.get) if season_values else "n/a"
     peak_units = float(season_values[peak_season]) if season_values else 0.0
     dead_count = int(dead_stock["flagged_count"])
@@ -544,8 +552,8 @@ def generate_business_insights(
             "recommended_action": f"Prioritize {top['sku_id']} in forecast review and inventory monitoring.",
         },
         {
-            "observation": f"{peak_season} has the highest observed seasonal demand.",
-            "evidence": f"The period total is {peak_units:,.0f} units in the computed season aggregation.",
+            "observation": f"{period_label.title()} {peak_season} has the highest observed demand.",
+            "evidence": f"The period total is {peak_units:,.0f} units in the computed {period_label} aggregation.",
             "business_implication": "Demand planning should account for calendar-period variation rather than use one flat average.",
             "recommended_action": f"Review replenishment coverage before the {peak_season} demand period.",
         },
@@ -656,7 +664,7 @@ def _chart_stock_vs_demand(sales: pd.DataFrame, inventory: pd.DataFrame) -> Dict
 
 def create_eda_charts(tables: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
     """Build reusable chart specs from *passed-in* data (no hard-coded sample values)."""
-    sales = tables.get("sales_daily")
+    sales = tables.get("analysis_ready", tables.get("sales_daily"))
     if sales is None:
         raise EDAError("create_eda_charts(): 'sales_daily' missing from D1 tables")
 

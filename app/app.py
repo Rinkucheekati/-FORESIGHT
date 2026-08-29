@@ -59,10 +59,10 @@ DATA_NOT_AVAILABLE_MESSAGE = (
     "metrics and model results will appear automatically when the official "
     "extracts are supplied and processed through D1."
 )
-SYNTHETIC_DATA_MESSAGE = (
-    "SYNTHETIC DEVELOPMENT DATA — temporary development results only. "
-    "These forecasts, risks, metrics, and recommendations are not official "
-    "Zidio or NorthBay Living results."
+OFFICIAL_DATA_MESSAGE = (
+    "OFFICIAL FORESIGHT DATA — dashboard figures are computed from the official "
+    "25,000-transaction selection (seed 42) processed through the D1–D4 modules. "
+    "Business thresholds applied in D4 are implementation assumptions for review."
 )
 
 DECISION_ACTION_TEMPLATES = {
@@ -476,8 +476,9 @@ def page_demand_analysis(state: Dict[str, Any], filters: Dict[str, Any]) -> None
     c1.metric("Total units sold", fmt_int(demand.get("total_units_sold")))
     dated = demand.get("dated") or {}
     c2.metric("Days observed", dated.get("unique_days", na_cell()))
-    c3.metric("SKUs selling",
-              len((demand.get("sku_level") or pd.DataFrame())) or na_cell())
+    sku_level = demand.get("sku_level")
+    sku_count = len(sku_level) if isinstance(sku_level, pd.DataFrame) else 0
+    c3.metric("SKUs selling", sku_count or na_cell())
 
     st.subheader("Total demand over time")
     daily = demand.get("daily_demand")
@@ -1064,7 +1065,7 @@ def main() -> None:
     )
     st.title("📦 Project FORESIGHT")
     st.caption("Demand & Inventory Intelligence — data-gated on D1–D4 outputs.")
-    st.warning(SYNTHETIC_DATA_MESSAGE)
+    st.caption(OFFICIAL_DATA_MESSAGE)
 
     state = get_official_state()
     if state.get("load_error"):

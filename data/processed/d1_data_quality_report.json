@@ -105,7 +105,7 @@
       "dataset": "sales_daily",
       "detection_rule": "df['promo_flag'].isna()",
       "issue": "nulls in 'promo_flag'",
-      "number_affected": 0,
+      "number_affected": 19085,
       "reason": "missing promo_flag cannot be safely derived from the row/table; no invention"
     },
     {
@@ -114,7 +114,7 @@
       "dataset": "sku_master",
       "detection_rule": "pd.to_datetime(errors='coerce')",
       "issue": "launch_date column text/raw",
-      "number_affected": 0,
+      "number_affected": 384,
       "reason": "official contract requires launch_date as date"
     },
     {
@@ -402,7 +402,7 @@
       "dataset": "sales_daily",
       "detection_rule": "df['promo_flag'].isna()",
       "issue": "nulls in 'promo_flag'",
-      "number_affected": 0,
+      "number_affected": 19085,
       "reason": "missing promo_flag cannot be safely derived from the row/table; no invention"
     },
     {
@@ -447,7 +447,7 @@
       "dataset": "sku_master",
       "detection_rule": "pd.to_datetime(errors='coerce')",
       "issue": "launch_date column text/raw",
-      "number_affected": 0,
+      "number_affected": 384,
       "reason": "official contract requires launch_date as date"
     },
     {
@@ -519,7 +519,7 @@
       "dataset": "sku_master",
       "detection_rule": "launch_date is null after parsing",
       "issue": "launch_date invalid/unparseable",
-      "number_affected": 0,
+      "number_affected": 384,
       "reason": "launch date cannot be repaired from the row"
     },
     {
@@ -780,7 +780,7 @@
       "dataset": "cross_table",
       "detection_rule": "set difference / duplicated() across extracts",
       "issue": "missing SKU/date combinations in sales panel",
-      "number_affected": 0,
+      "number_affected": 50,
       "reason": "relationships are validated and surfaced for review; creating missing master/calendar rows is forbidden"
     },
     {
@@ -800,12 +800,75 @@
     "inventory_missing_sku_date_combos": [],
     "inventory_skus_missing_in_master": [],
     "sales_dates_outside_calendar": [],
-    "sales_missing_sku_date_combos": [],
+    "sales_missing_sku_date_combos": [
+      "SKU00001@2022-01-01",
+      "SKU00001@2022-01-02",
+      "SKU00001@2022-01-03",
+      "SKU00001@2022-01-04",
+      "SKU00001@2022-01-05",
+      "SKU00001@2022-01-06",
+      "SKU00001@2022-01-07",
+      "SKU00001@2022-01-08",
+      "SKU00001@2022-01-09",
+      "SKU00001@2022-01-10",
+      "SKU00001@2022-01-11",
+      "SKU00001@2022-01-12",
+      "SKU00001@2022-01-13",
+      "SKU00001@2022-01-14",
+      "SKU00001@2022-01-15",
+      "SKU00001@2022-01-16",
+      "SKU00001@2022-01-17",
+      "SKU00001@2022-01-18",
+      "SKU00001@2022-01-19",
+      "SKU00001@2022-01-20",
+      "SKU00001@2022-01-21",
+      "SKU00001@2022-01-22",
+      "SKU00001@2022-01-23",
+      "SKU00001@2022-01-24",
+      "SKU00001@2022-01-25",
+      "SKU00001@2022-01-26",
+      "SKU00001@2022-01-27",
+      "SKU00001@2022-01-28",
+      "SKU00001@2022-01-29",
+      "SKU00001@2022-01-30",
+      "SKU00001@2022-01-31",
+      "SKU00001@2022-02-01",
+      "SKU00001@2022-02-02",
+      "SKU00001@2022-02-03",
+      "SKU00001@2022-02-04",
+      "SKU00001@2022-02-05",
+      "SKU00001@2022-02-06",
+      "SKU00001@2022-02-07",
+      "SKU00001@2022-02-08",
+      "SKU00001@2022-02-09",
+      "SKU00001@2022-02-10",
+      "SKU00001@2022-02-11",
+      "SKU00001@2022-02-12",
+      "SKU00001@2022-02-13",
+      "SKU00001@2022-02-14",
+      "SKU00001@2022-02-15",
+      "SKU00001@2022-02-16",
+      "SKU00001@2022-02-17",
+      "SKU00001@2022-02-18",
+      "SKU00001@2022-02-19"
+    ],
     "sales_skus_missing_in_master": []
   },
-  "generated_at_utc": "2026-08-24T16:43:39.258523Z",
+  "generated_at_utc": "2026-08-28T12:05:41.789779Z",
   "policy_note": "Missing values: business keys dropped deterministically; all other fields preserved and reported. No value was invented.",
   "report": "D1 data-quality & cleaning decisions",
+  "source_boundary": {
+    "customer_master_rows": 10000,
+    "fabricated_source_records": 0,
+    "ground_truth_flag_rows": 600,
+    "promotion_rows": 100,
+    "selected_transaction_file": "data/raw/official_selected/sales_transactions_25000.csv",
+    "selected_transaction_rows": 25000,
+    "selected_unique_customers": 8808,
+    "selected_unique_skus": 4616,
+    "selected_unique_stores": 30,
+    "store_master_rows": 30
+  },
   "validation": {
     "calendar": {
       "business_key_duplicate_rows": 0,
@@ -820,14 +883,14 @@
       ],
       "dataset": "calendar",
       "date_range": [
-        "2024-01-01",
-        "2025-07-13"
+        "2022-01-01",
+        "2025-12-31"
       ],
       "dtypes": {
         "date": "datetime64[us]",
         "is_holiday": "Int64",
-        "month": "int64",
-        "promo_event": "str",
+        "month": "int32",
+        "promo_event": "object",
         "season": "str",
         "week": "int64"
       },
@@ -838,13 +901,13 @@
       "missing_columns": [],
       "null_counts": {
         "date": 0,
-        "is_holiday": 0,
+        "is_holiday": 1461,
         "month": 0,
-        "promo_event": 510,
+        "promo_event": 363,
         "season": 0,
         "week": 0
       },
-      "row_count": 560,
+      "row_count": 1461,
       "unexpected_columns": []
     },
     "inventory_snapshots": {
@@ -860,8 +923,8 @@
       ],
       "dataset": "inventory_snapshots",
       "date_range": [
-        "2024-01-01",
-        "2025-07-13"
+        "2025-12-31",
+        "2025-12-31"
       ],
       "dtypes": {
         "date": "datetime64[us]",
@@ -884,7 +947,7 @@
         "reorder_point": 0,
         "sku_id": 0
       },
-      "row_count": 16800,
+      "row_count": 4495,
       "unexpected_columns": []
     },
     "sales_daily": {
@@ -900,14 +963,14 @@
       ],
       "dataset": "sales_daily",
       "date_range": [
-        "2024-01-01",
-        "2025-07-13"
+        "2022-01-01",
+        "2025-12-31"
       ],
       "dtypes": {
         "date": "datetime64[us]",
         "promo_flag": "Int64",
         "revenue": "float64",
-        "sku_id": "str",
+        "sku_id": "string",
         "unit_price": "float64",
         "units_sold": "int64"
       },
@@ -918,13 +981,13 @@
       "missing_columns": [],
       "null_counts": {
         "date": 0,
-        "promo_flag": 0,
+        "promo_flag": 19085,
         "revenue": 0,
         "sku_id": 0,
         "unit_price": 0,
         "units_sold": 0
       },
-      "row_count": 16800,
+      "row_count": 24109,
       "unexpected_columns": []
     },
     "sku_master": {
@@ -955,13 +1018,13 @@
       "missing_columns": [],
       "null_counts": {
         "category": 0,
-        "launch_date": 0,
+        "launch_date": 384,
         "list_price": 0,
         "sku_id": 0,
         "subcategory": 0,
         "unit_cost": 0
       },
-      "row_count": 30,
+      "row_count": 5000,
       "unexpected_columns": []
     }
   }

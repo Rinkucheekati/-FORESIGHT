@@ -1,20 +1,20 @@
 {
   "baseline": {
-    "bias": -0.8208333333333333,
-    "evaluated_rows": 720,
-    "mape": 0.3714437401806794,
+    "bias": -0.12236286919831224,
+    "evaluated_rows": 237,
+    "mape": 0.7602021639576141,
     "name": "seasonal_naive",
     "seasonal_period_weeks": 52,
-    "wape": 0.2423955282451808
+    "wape": 0.6388888888888888
   },
-  "improvement_vs_baseline_wape": 0.20201206440752037,
+  "improvement_vs_baseline_wape": 0.2077064790185007,
   "model": {
-    "bias": -1.1622663012296408,
-    "evaluated_rows": 720,
-    "mape": 0.7272770436291814,
+    "bias": 0.10146245877967443,
+    "evaluated_rows": 2962,
+    "mape": 0.6671339917184845,
     "name": "hist_gradient_boosting",
     "random_seed": 42,
-    "wape": 0.1934287071812204
+    "wape": 0.5061875272937356
   },
   "same_windows": true
 }
