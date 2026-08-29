@@ -4,8 +4,11 @@
 
 > **Status: D1–D7 complete.** All seven deliverables are implemented and
 > verified end-to-end on the official dataset (deterministic 25,000-transaction
-> selection, seed 42). Public deployment of the dashboard and scoring API is
-> pending; **deployment URLs will be added here after deployment.**
+> selection, seed 42).## Live Deployment
+
+- **FORESIGHT Dashboard:** [Open Dashboard](https://foresight-dashboard-augk.onrender.com)
+- **FORESIGHT Scoring API:** [Open API](https://foresight-scoring-api-7n0w.onrender.com)
+- **API Documentation:** [Open API Docs](https://foresight-scoring-api-7n0w.onrender.com/docs)
 
 ---
 
