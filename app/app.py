@@ -223,6 +223,22 @@ def na_cell() -> str:
     return "Not available"
 
 
+@st.cache_data(show_spinner=False)
+def forecasted_sku_count_cached(sig: str, processed_dir_str: str) -> Optional[int]:
+    """Count distinct SKUs present in the official D3 forecast output.
+
+    Presentation-only helper: it does not alter D1-D7 calculations, model
+    selection, backtesting, or risk scoring.
+    """
+    path = Path(processed_dir_str) / "forecast_results.csv"
+    if not path.is_file():
+        return None
+    try:
+        df = pd.read_csv(path, usecols=["sku_id"], dtype={"sku_id": str})
+        return int(df["sku_id"].nunique())
+    except Exception:  # noqa: BLE001 - dashboard should remain usable
+        return None
+
 
 def risk_cfg_tuple(cfg: risk.RiskConfig) -> Tuple[Any, ...]:
     return tuple(getattr(cfg, f) for f in RISK_CFG_FIELDS)
@@ -326,10 +342,17 @@ def page_executive(state: Dict[str, Any]) -> None:
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        kpi("Total SKUs",
-            int(master["sku_id"].nunique()) if master is not None else na_cell())
-        kpi("Forecast horizon (weeks)",
-            d3rep.get("forecast_horizon_weeks", "Not available"), fmt_int)
+        total_skus = (
+            int(master["sku_id"].nunique())
+            if master is not None else None
+        )
+        forecasted_skus = (
+            forecasted_sku_count_cached(state["sig"], PROCESSED_DIR_STR)
+            if state.get("sig") else None
+        )
+        kpi("Total catalog SKUs", total_skus if total_skus is not None else na_cell())
+        kpi("SKUs with D3 forecast",
+            forecasted_skus if forecasted_skus is not None else na_cell())
     with c2:
         model = d3rep.get("selected_model")
         kpi("Forecast model selected",
@@ -338,7 +361,7 @@ def page_executive(state: Dict[str, Any]) -> None:
         wape_m = (d3rep.get("wape") or {}).get("model")
         wape_b = (d3rep.get("wape") or {}).get("baseline")
         kpi("WAPE (model vs baseline)",
-            f"{fmt_pct_raw(wape_m)} vs {fmt_pct_raw(wape_b)}"
+            f"{fmt_pct(wape_m)} vs {fmt_pct(wape_b)}"
             if wape_m is not None and wape_b is not None else "Not available")
     with c3:
         bias_m = (d3rep.get("bias") or {}).get("model")
@@ -616,21 +639,41 @@ def page_forecast(state: Dict[str, Any], filters: Dict[str, Any]) -> None:
         )
         return
 
+    forecasted_skus = (
+        forecasted_sku_count_cached(state["sig"], PROCESSED_DIR_STR)
+        if state.get("sig") else None
+    )
+    master = (state.get("tables") or {}).get("sku_master")
+    total_skus = (
+        int(master["sku_id"].nunique())
+        if master is not None else None
+    )
+    if forecasted_skus is not None and total_skus is not None:
+        not_forecasted = max(total_skus - forecasted_skus, 0)
+        coverage = (forecasted_skus / total_skus * 100.0) if total_skus else 0.0
+        st.caption(
+            f"D3 forecast coverage: {forecasted_skus:,} of {total_skus:,} "
+            f"catalog SKUs ({coverage:.1f}%). {not_forecasted:,} SKUs have "
+            "no D3 forecast output and are not counted as forecasted SKUs."
+        )
+
     st.subheader("Model vs seasonal-naive baseline")
     wape_block = rep.get("wape") or {}
     bias_block = rep.get("bias") or {}
     cmp_block = rep.get("model_vs_baseline") or {}
     k1, k2, k3, k4 = st.columns(4)
-    k1.metric("WAPE — model", fmt_pct_raw(wape_block.get("model")))
-    k2.metric("WAPE — baseline", fmt_pct_raw(wape_block.get("baseline")))
+    k1.metric("WAPE — model", fmt_pct(wape_block.get("model")))
+    k2.metric("WAPE — baseline", fmt_pct(wape_block.get("baseline")))
     imp = cmp_block.get("improvement_vs_baseline_wape")
     k3.metric("WAPE improvement", fmt_pct(imp) if imp is not None else "Not available")
     k4.metric("Bias — model", fmt_num(bias_block.get("model")))
 
     if wape_block.get("model") is not None and wape_block.get("baseline") is not None:
         st.bar_chart(pd.DataFrame({
-            "WAPE (%)": {"ML model": wape_block["model"],
-                         "Seasonal-naive": wape_block["baseline"]}
+            "WAPE (%)": {
+                "ML model": float(wape_block["model"]) * 100.0,
+                "Seasonal-naive": float(wape_block["baseline"]) * 100.0,
+            }
         }))
     st.caption(f"{PRIMARY_METRIC_LABEL} · {SECONDARY_METRIC_LABEL}. "
                "Bias sign convention: positive = over-forecast.")
@@ -662,6 +705,16 @@ def _sku_forecast_selector(state: Dict[str, Any], filters: Dict[str, Any]) -> No
         info_state(extra=["SKU selection appears once official D1 outputs exist."])
         return
     skus = sorted(master["sku_id"].astype(str).unique())
+    forecasted_skus = (
+        forecasted_sku_count_cached(state["sig"], PROCESSED_DIR_STR)
+        if state.get("sig") else None
+    )
+    if forecasted_skus is not None:
+        st.caption(
+            f"Catalog: {len(skus):,} SKUs · D3 forecast output: "
+            f"{forecasted_skus:,} SKUs. A selected SKU may show a low-confidence "
+            "fallback or no forecast when its history is insufficient."
+        )
     default = filters.get("sku") if filters.get("sku") in skus else skus[0]
     sku_id = st.selectbox("Select SKU", skus, index=skus.index(default),
                           key="fc_sku_select")
@@ -747,8 +800,8 @@ def page_model_performance(state: Dict[str, Any]) -> None:
     wb = rep.get("wape") or {}
     bb = rep.get("bias") or {}
     mb = rep.get("mape") or {}
-    m1.metric("ML WAPE", fmt_pct_raw(wb.get("model")))
-    m2.metric("Baseline WAPE", fmt_pct_raw(wb.get("baseline")))
+    m1.metric("ML WAPE", fmt_pct(wb.get("model")))
+    m2.metric("Baseline WAPE", fmt_pct(wb.get("baseline")))
     m3.metric("ML bias", fmt_num(bb.get("model")))
     m4.metric("Baseline bias", fmt_num(bb.get("baseline")))
 
